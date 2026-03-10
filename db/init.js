@@ -3,7 +3,9 @@ const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 
-const DB_PATH = path.join(__dirname, 'academy.sqlite');
+const DB_PATH = process.env.VERCEL
+  ? path.join('/tmp', 'academy.sqlite')
+  : path.join(__dirname, 'academy.sqlite');
 let _db = null;
 let _ready = null;
 
