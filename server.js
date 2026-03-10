@@ -34,8 +34,9 @@ app.use(async (req, res, next) => {
     await dbReady;
     next();
   } catch (err) {
+    console.error('DB init error:', err);
     dbReady = null;
-    res.status(500).json({ error: 'Database initialization failed' });
+    res.status(500).json({ error: 'Database initialization failed', detail: err.message });
   }
 });
 

@@ -11,7 +11,10 @@ let _ready = null;
 
 function initDb() {
   if (_ready) return _ready;
-  _ready = initSqlJs().then(SQL => {
+  const sqlConfig = process.env.VERCEL
+    ? { locateFile: file => `https://sql.js.org/dist/${file}` }
+    : {};
+  _ready = initSqlJs(sqlConfig).then(SQL => {
     let data = null;
     if (fs.existsSync(DB_PATH)) {
       data = fs.readFileSync(DB_PATH);
