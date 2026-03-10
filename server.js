@@ -5,20 +5,33 @@ const { initDb, get, all } = require('./db/init');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const isProd = process.env.NODE_ENV === 'production';
+
+if (isProd) app.set('trust proxy', 1);
 
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = process.env.CORS_ORIGIN || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  if (isProd) {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  }
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 
 async function start() {
   await initDb();
+
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', uptime: Math.floor(process.uptime()), env: isProd ? 'production' : 'development' });
+  });
 
   app.use('/api/auth', require('./api/auth'));
   app.use('/api/chat', require('./api/chat'));
@@ -75,8 +88,13 @@ async function start() {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
   });
 
-  app.listen(PORT, () => {
-    console.log(`AI Academy Platform running on http://localhost:${PORT}`);
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`AI Academy Platform running on port ${PORT} [${isProd ? 'production' : 'development'}]`);
+  });
+
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully...');
+    server.close(() => process.exit(0));
   });
 }
 
