@@ -11,10 +11,9 @@ let _ready = null;
 
 function initDb() {
   if (_ready) return _ready;
-  const sqlConfig = process.env.VERCEL
-    ? { locateFile: file => `https://sql.js.org/dist/${file}` }
-    : {};
-  _ready = initSqlJs(sqlConfig).then(SQL => {
+  const wasmPath = path.join(__dirname, '..', 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
+  const wasmBinary = fs.readFileSync(wasmPath);
+  _ready = initSqlJs({ wasmBinary }).then(SQL => {
     let data = null;
     if (fs.existsSync(DB_PATH)) {
       data = fs.readFileSync(DB_PATH);
