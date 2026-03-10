@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <title>AI Academy Portalı</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="top-bar">
+        <div class="logo-area">
+          <div class="logo-mark">AI</div>
+          <div class="logo-text">
+            <span class="logo-title">AI Academy</span>
+            <span class="logo-subtitle">Kurum İçi AI Öğrenme Portalı</span>
+          </div>
+        </div>
+        <div class="top-actions">
+          <div class="role-select">
+            <label for="roleSelect">Rolünüz:</label>
+            <select id="roleSelect">
+              <option value="general">Genel Çalışan</option>
+              <option value="business">Ofis / İş Birimleri</option>
+              <option value="technical">Teknik Ekip (IT / Yazılım / Veri)</option>
+            </select>
+          </div>
+          <button id="resetProgressBtn" class="ghost-button">İlerlemeyi Sıfırla</button>
+        </div>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div class="hero-text">
+            <h1>Claude ile Akıllı Çalışmayı Öğrenin</h1>
+            <p>
+              Anthropic Academy ve kurum içi içeriklerle, çalışanlarınızın AI okuryazarlığını
+              artırın, iş akışlarını hızlandırın ve güvenli AI kullanım kültürü oluşturun.
+            </p>
+            <div class="hero-actions">
+              <button data-nav-target="dashboard" class="primary-button">Panoya Git</button>
+              <a href="docs/viewer.html?doc=courses/ai-fluency.md" class="secondary-link">
+                Eğitimlere Göz At
+              </a>
+            </div>
+          </div>
+          <div class="hero-summary-card">
+            <h2>Genel İlerleme</h2>
+            <div class="progress-ring">
+              <div class="progress-ring-inner">
+                <span id="overallProgressPercent">0%</span>
+              </div>
+            </div>
+            <p class="hero-kpi">
+              <span id="completedMandatoryCount">0</span>/<span id="totalMandatoryCount">0</span>
+              zorunlu modül tamamlandı
+            </p>
+            <p class="hero-kpi">
+              Toplam puan:
+              <strong><span id="totalPoints">0</span> puan</strong>
+            </p>
+            <p class="hero-kpi">
+              Rozet:
+              <strong><span id="currentBadge">-</span></strong>
+            </p>
+          </div>
+        </section>
+
+        <nav class="tab-nav">
+          <button class="tab-button active" data-tab="dashboard">Pano</button>
+          <button class="tab-button" data-tab="courses">Eğitimler</button>
+          <button class="tab-button" data-tab="library">Kütüphane</button>
+          <button class="tab-button" data-tab="exam">Sınav &amp; Sertifika</button>
+          <button class="tab-button" data-tab="challenges">Görevler</button>
+          <button class="tab-button" data-tab="profile">Profil &amp; Rozetler</button>
+        </nav>
+
+        <section id="dashboardTab" class="tab-panel active">
+          <div class="grid two-columns">
+            <div class="card">
+              <h2>Önerilen İlk Adımlar</h2>
+              <p>
+                Başlangıç için aşağıdaki zorunlu modülleri tamamlamanız önerilir. Bu modüller,
+                AI okuryazarlığı ve Claude kullanımının temelini oluşturur.
+              </p>
+              <ul id="recommendedList" class="pill-list"></ul>
+            </div>
+            <div class="card">
+              <h2>Rolünüze Göre Öneriler</h2>
+              <p>
+                Seçili rol için en çok değer katacak eğitimleri burada bulabilirsiniz. Rolünüzü
+                üst menüden değiştirebilirsiniz.
+              </p>
+              <ul id="roleBasedList" class="pill-list"></ul>
+            </div>
+          </div>
+
+          <div class="grid two-columns">
+            <div class="card">
+              <h2>Son Tamamladıklarınız</h2>
+              <ul id="recentCompletionsList" class="activity-list"></ul>
+            </div>
+            <div class="card">
+              <h2>Bu Haftanın Hedefi</h2>
+              <p id="weeklyGoalText">
+                Bu hafta en az 1 temel zorunlu modülü tamamlayın ve 1 görev bitirin.
+              </p>
+              <ul id="weeklyGoalStatus" class="status-list"></ul>
+            </div>
+          </div>
+        </section>
+
+        <section id="coursesTab" class="tab-panel">
+          <div class="card">
+            <div class="card-header-row">
+              <div>
+                <h2>Eğitim Kataloğu</h2>
+                <p>Kurum içi AI programı kapsamındaki tüm modüller.</p>
+              </div>
+              <div class="filter-row">
+                <select id="courseRoleFilter">
+                  <option value="all">Tüm roller</option>
+                  <option value="general">Genel</option>
+                  <option value="business">Ofis / İş Birimleri</option>
+                  <option value="technical">Teknik</option>
+                </select>
+                <select id="courseTypeFilter">
+                  <option value="all">Tümü</option>
+                  <option value="mandatory">Zorunlu</option>
+                  <option value="optional">İsteğe bağlı</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="courseList" class="card-list"></div>
+          </div>
+        </section>
+
+        <section id="libraryTab" class="tab-panel">
+          <div class="card">
+            <h2>AI Okuryazarlık Kütüphanesi</h2>
+            <p>
+              Anthropic Academy ve OpenAI Academy gibi kaynaklardan esinlenilmiş, kurumunuza uygun
+              derlenmiş Türkçe dokümanlar. Başlangıçta iki temel konu ile başlar: "AI nedir?" ve
+              "Prompt mühendisliğine giriş".
+            </p>
+            <div id="libraryList" class="card-list"></div>
+          </div>
+        </section>
+
+        <section id="examTab" class="tab-panel">
+          <div class="card">
+            <div class="card-header-row">
+              <div>
+                <h2>AI Okuryazarlık Sınavı &amp; Sertifika</h2>
+                <p>
+                  Üç seviyeli sınav ile AI okuryazarlığınızı ölçün. Her seviyede 70 ve üzeri puan
+                  alırsanız ilgili seviyenin sertifikasını kazanırsınız.
+                </p>
+              </div>
+              <div class="exam-controls">
+                <select id="examLevelSelect">
+                  <option value="level1">Seviye 1 – Temel</option>
+                  <option value="level2">Seviye 2 – İş / Ofis</option>
+                  <option value="level3">Seviye 3 – Teknik</option>
+                </select>
+                <button id="startExamBtn" class="small-button primary">Sınavı Başlat</button>
+              </div>
+            </div>
+
+            <div id="examSummary" class="exam-summary">
+              <div>
+                <span>Mevcut seviye için en iyi skor:</span>
+                <strong><span id="examBestScore">-</span></strong>
+              </div>
+              <div>
+                <span>Sertifika durumu:</span>
+                <strong><span id="examCertificateStatus">Henüz alınmadı</span></strong>
+              </div>
+            </div>
+
+            <div id="quizContainer">
+              <p class="exam-hint">
+                Sınavı başlattığınızda 5 soru göreceksiniz. Tüm soruları yanıtlayıp "Cevapları
+                Gönder" düğmesine basın.
+              </p>
+            </div>
+
+            <div class="exam-actions">
+              <button id="submitExamBtn" class="small-button primary" disabled>
+                Cevapları Gönder
+              </button>
+              <span id="quizResultMessage" class="exam-result-message"></span>
+            </div>
+          </div>
+        </section>
+
+        <section id="challengesTab" class="tab-panel">
+          <div class="card">
+            <h2>Görevler ve Mini Challenge'lar</h2>
+            <p>
+              Gerçek iş akışlarınızda Claude kullanmanızı teşvik eden, kısa süreli görevler. Her
+              tamamladığınız görev puan kazandırır.
+            </p>
+            <div id="challengeList" class="card-list"></div>
+          </div>
+        </section>
+
+        <section id="profileTab" class="tab-panel">
+          <div class="grid two-columns">
+            <div class="card">
+              <h2>Profil Özeti</h2>
+              <p>Tarayıcı bazlı yerel profilinizin özetini görüyorsunuz.</p>
+              <ul class="profile-stats">
+                <li>
+                  <span>Rol</span>
+                  <span id="profileRole">-</span>
+                </li>
+                <li>
+                  <span>Tamamlanan Eğitim Sayısı</span>
+                  <span id="profileCompletedCourses">0</span>
+                </li>
+                <li>
+                  <span>Tamamlanan Görev Sayısı</span>
+                  <span id="profileCompletedChallenges">0</span>
+                </li>
+                <li>
+                  <span>Toplam Puan</span>
+                  <span id="profilePoints">0</span>
+                </li>
+              </ul>
+            </div>
+            <div class="card">
+              <h2>Rozetler</h2>
+              <div id="badgeList" class="badge-list"></div>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Veri Saklama ve Gizlilik</h2>
+            <p>
+              Bu demo sürümde tüm veriler yalnızca tarayıcınızın
+              <code>localStorage</code>'ında saklanır. Kimlik doğrulama veya merkezi kullanıcı
+              verisi tutulmaz. Kurum içi entegrasyonlar (SSO, kullanıcı veritabanı) gerçek
+              kurulumda eklenmelidir.
+            </p>
+          </div>
+        </section>
+      </main>
+
+      <footer class="app-footer">
+        <span>AI Academy Portalı · Demo sürüm</span>
+        <span>Tüm eğitim içerikleri kurum içi olarak barındırılmaktadır.</span>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
+

@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <title>AI Academy Platform</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect rx='20' width='100' height='100' fill='%234f46e5'/><text x='50' y='68' text-anchor='middle' font-size='48' font-weight='700' fill='white'>AI</text></svg>" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <a href="#main-content" class="skip-link">İçeriğe geç</a>
+    <div class="app-shell">
+      <header class="top-bar">
+        <div class="logo-area">
+          <div class="logo-mark">AI</div>
+          <div class="logo-text">
+            <span class="logo-title">AI Academy</span>
+            <span class="logo-subtitle">Kurumsal AI Platformu</span>
+          </div>
+        </div>
+        <div class="top-actions">
+          <div class="credit-pill" id="creditPill" style="display:none">
+            <span id="creditCount">0</span> kredi
+          </div>
+          <div class="role-select">
+            <label for="roleSelect">Rol:</label>
+            <select id="roleSelect">
+              <option value="general">Genel</option>
+              <option value="business">Ofis / İş</option>
+              <option value="technical">Teknik</option>
+            </select>
+          </div>
+          <div id="authArea">
+            <button id="loginBtn" class="primary-button small">Giriş Yap</button>
+          </div>
+          <div id="userArea" style="display:none" class="user-dropdown-wrapper">
+            <button id="userMenuBtn" class="ghost-button" title="Profil" aria-haspopup="true" aria-expanded="false"></button>
+            <div id="userDropdown" class="user-dropdown" role="menu" aria-label="Kullanıcı menüsü">
+              <div class="user-dropdown-info" id="dropdownUserInfo"></div>
+              <hr class="dropdown-divider" />
+              <button class="dropdown-item" data-dropdown-action="profile" role="menuitem">&#128100; Profil</button>
+              <button class="dropdown-item" data-dropdown-action="settings" role="menuitem">&#9881; Plan ve Ayarlar</button>
+              <hr class="dropdown-divider" />
+              <button class="dropdown-item dropdown-item-danger" id="dropdownLogoutBtn" role="menuitem">&#128682; Çıkış Yap</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main id="main-content">
+        <section class="hero">
+          <div class="hero-text">
+            <h1>AI ile Geleceği Şekillendirin</h1>
+            <p>
+              Eğitimler, AI araçları, sohbet asistanı ve prompt pazaryeri ile
+              kurumunuzun AI dönüşümünü hızlandırın.
+            </p>
+            <div class="hero-actions">
+              <button data-nav-target="dashboard" class="primary-button">Panoya Git</button>
+              <button data-nav-target="chat" class="secondary-link">AI Asistan</button>
+              <button data-nav-target="tools" class="secondary-link">AI Araçları</button>
+            </div>
+          </div>
+          <div class="hero-summary-card">
+            <h2>Genel İlerleme</h2>
+            <div class="progress-ring">
+              <div class="progress-ring-inner">
+                <span id="overallProgressPercent">0%</span>
+              </div>
+            </div>
+            <p class="hero-kpi">
+              <span id="completedMandatoryCount">0</span>/<span id="totalMandatoryCount">0</span>
+              zorunlu modül
+            </p>
+            <p class="hero-kpi">Puan: <strong><span id="totalPoints">0</span></strong></p>
+            <p class="hero-kpi">Rozet: <strong><span id="currentBadge">-</span></strong></p>
+            <div class="roi-mini" id="roiMini" style="display:none">
+              <span>AI Tasarruf: <strong><span id="roiHours">0</span> saat</strong></span>
+            </div>
+          </div>
+        </section>
+
+        <nav class="tab-nav" role="tablist" aria-label="Ana navigasyon">
+          <button class="tab-button active" data-tab="dashboard" role="tab" aria-selected="true">Pano</button>
+          <button class="tab-button" data-tab="courses">Eğitimler</button>
+          <button class="tab-button" data-tab="chat">AI Asistan</button>
+          <button class="tab-button" data-tab="tools">AI Araçları</button>
+          <button class="tab-button" data-tab="marketplace">Pazaryeri</button>
+          <button class="tab-button" data-tab="library">Kütüphane</button>
+          <button class="tab-button" data-tab="exam">Sınav</button>
+          <button class="tab-button" data-tab="challenges">Görevler</button>
+          <button class="tab-button" data-tab="googledata">Google</button>
+          <button class="tab-button" data-tab="leaderboard">Sıralama</button>
+          <button class="tab-button" data-tab="profile">Profil</button>
+        </nav>
+
+        <!-- DASHBOARD -->
+        <section id="dashboardTab" class="tab-panel active">
+          <div class="grid two-columns">
+            <div class="card">
+              <h2>Önerilen İlk Adımlar</h2>
+              <p>Zorunlu modülleri tamamlayarak AI okuryazarlığınızı artırın.</p>
+              <ul id="recommendedList" class="pill-list"></ul>
+            </div>
+            <div class="card">
+              <h2>Rolünüze Göre Öneriler</h2>
+              <p>Seçili rol için en çok değer katacak eğitimler.</p>
+              <ul id="roleBasedList" class="pill-list"></ul>
+            </div>
+          </div>
+          <div class="grid two-columns">
+            <div class="card">
+              <h2>Son Aktiviteler</h2>
+              <ul id="recentCompletionsList" class="activity-list"></ul>
+            </div>
+            <div class="card">
+              <h2>Haftalık Hedef</h2>
+              <p id="weeklyGoalText">Bu hafta 1 modül + 1 görev tamamlayın.</p>
+              <ul id="weeklyGoalStatus" class="status-list"></ul>
+            </div>
+          </div>
+          <div class="card" id="roiCard" style="display:none">
+            <h2>AI ROI Hesaplayıcı</h2>
+            <div id="roiContent" class="roi-dashboard"></div>
+          </div>
+          <div class="card news-card">
+            <div class="card-header-row">
+              <div>
+                <h2>&#128240; Güncel AI Haberleri</h2>
+                <p>Yapay zeka dünyasından son gelişmeler, Türkçe özetlerle.</p>
+              </div>
+              <div class="news-header-actions">
+                <span id="newsLastUpdated" class="news-timestamp"></span>
+                <button id="refreshNewsBtn" class="ghost-button small" title="Haberleri yenile">&#8635; Yenile</button>
+              </div>
+            </div>
+            <div id="newsList" class="news-list">
+              <div class="news-skeleton">
+                <div class="skeleton-line wide"></div>
+                <div class="skeleton-line medium"></div>
+                <div class="skeleton-line wide"></div>
+                <div class="skeleton-line medium"></div>
+                <div class="skeleton-line wide"></div>
+                <div class="skeleton-line medium"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- COURSES -->
+        <section id="coursesTab" class="tab-panel">
+          <div class="card">
+            <div class="card-header-row">
+              <div>
+                <h2>Eğitim Kataloğu</h2>
+                <p>Kurum içi AI programı modülleri.</p>
+              </div>
+              <div class="filter-row">
+                <select id="courseRoleFilter">
+                  <option value="all">Tüm roller</option>
+                  <option value="general">Genel</option>
+                  <option value="business">Ofis / İş</option>
+                  <option value="technical">Teknik</option>
+                </select>
+                <select id="courseTypeFilter">
+                  <option value="all">Tümü</option>
+                  <option value="mandatory">Zorunlu</option>
+                  <option value="optional">İsteğe bağlı</option>
+                </select>
+              </div>
+            </div>
+            <div id="courseList" class="card-list"></div>
+          </div>
+        </section>
+
+        <!-- AI CHAT -->
+        <section id="chatTab" class="tab-panel">
+          <div class="chat-layout">
+            <button id="mobileChatSidebarToggle" class="mobile-sidebar-toggle" aria-label="Konuşma listesini aç">&#9776; Konuşmalar</button>
+            <div class="chat-sidebar" id="chatSidebar">
+              <div class="chat-sidebar-header">
+                <h3>Konuşmalar</h3>
+                <button id="newChatBtn" class="small-button primary">+ Yeni</button>
+              </div>
+              <div class="chat-sidebar-options">
+                <label>Asistan Türü:</label>
+                <select id="chatPersona">
+                  <option value="general">Genel Asistan</option>
+                  <option value="hr">İK Uzmanı</option>
+                  <option value="it">BT Uzmanı</option>
+                  <option value="marketing">Pazarlama</option>
+                  <option value="finance">Finans</option>
+                  <option value="legal">Hukuk</option>
+                  <option value="tutor">AI Eğitmeni</option>
+                </select>
+              </div>
+              <div id="conversationList" class="conversation-list"></div>
+            </div>
+            <div class="chat-main">
+              <div id="chatMessages" class="chat-messages">
+                <div class="chat-welcome">
+                  <h2>AI Asistanınız</h2>
+                  <p>Departmanınıza özel AI asistanı ile sohbet edin. Sol panelden asistan türünü seçin.</p>
+                  <div class="chat-suggestions">
+                    <button class="suggestion-chip" data-msg="Etkili prompt yazmayı öğretir misin?">Prompt ipuçları</button>
+                    <button class="suggestion-chip" data-msg="Profesyonel bir e-posta taslağı hazırla">E-posta yardımı</button>
+                    <button class="suggestion-chip" data-msg="Bu hafta AI ile neler yapabilirim?">AI kullanım fikirleri</button>
+                    <button class="suggestion-chip" data-msg="KVKK kapsamında AI kullanımı hakkında bilgi ver">KVKK ve AI</button>
+                  </div>
+                </div>
+              </div>
+              <div class="chat-input-area">
+                <div class="chat-input-row">
+                  <button id="voiceBtn" class="icon-button" title="Sesli giriş">&#127908;</button>
+                  <textarea id="chatInput" placeholder="Mesajınızı yazın..." rows="1"></textarea>
+                  <button id="sendChatBtn" class="primary-button small">Gönder</button>
+                </div>
+                <div class="chat-input-hint">
+                  <span id="chatCreditHint">Her mesaj ~1 kredi harcar</span>
+                  <span id="voiceStatus" style="display:none">Dinleniyor...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- AI TOOLS -->
+        <section id="toolsTab" class="tab-panel">
+          <div class="card">
+            <h2>AI Araç Paketi</h2>
+            <p>Hazır AI araçlarıyla anında verimlilik kazanın. Her araç kredi harcar.</p>
+          </div>
+          <div class="tools-grid" id="toolsGrid">
+            <div class="tool-card" data-tool="email-writer">
+              <div class="tool-icon">&#9993;</div>
+              <h3>E-posta Yazıcı</h3>
+              <p>Profesyonel iş e-postaları</p>
+              <span class="tool-cost">3 kredi</span>
+            </div>
+            <div class="tool-card" data-tool="summarizer">
+              <div class="tool-icon">&#128221;</div>
+              <h3>Doküman Özetleyici</h3>
+              <p>Uzun metinleri özetle</p>
+              <span class="tool-cost">3 kredi</span>
+            </div>
+            <div class="tool-card" data-tool="meeting-notes">
+              <div class="tool-icon">&#128197;</div>
+              <h3>Toplantı Notu</h3>
+              <p>Ham notlardan tutanak</p>
+              <span class="tool-cost">4 kredi</span>
+              <span class="tool-badge pro">Pro</span>
+            </div>
+            <div class="tool-card" data-tool="report-generator">
+              <div class="tool-icon">&#128202;</div>
+              <h3>Rapor Oluşturucu</h3>
+              <p>Veriden otomatik rapor</p>
+              <span class="tool-cost">5 kredi</span>
+              <span class="tool-badge pro">Pro</span>
+            </div>
+            <div class="tool-card" data-tool="code-reviewer">
+              <div class="tool-icon">&#128187;</div>
+              <h3>Kod İnceleyici</h3>
+              <p>Güvenlik ve kalite analizi</p>
+              <span class="tool-cost">4 kredi</span>
+              <span class="tool-badge pro">Pro</span>
+            </div>
+            <div class="tool-card" data-tool="translator">
+              <div class="tool-icon">&#127760;</div>
+              <h3>Çeviri Motoru</h3>
+              <p>Profesyonel doküman çevirisi</p>
+              <span class="tool-cost">3 kredi</span>
+            </div>
+            <div class="tool-card" data-tool="presentation">
+              <div class="tool-icon">&#127916;</div>
+              <h3>Sunum Taslağı</h3>
+              <p>Slayt içerikleri oluştur</p>
+              <span class="tool-cost">5 kredi</span>
+              <span class="tool-badge pro">Pro</span>
+            </div>
+            <div class="tool-card" data-tool="contract-analyzer">
+              <div class="tool-icon">&#128220;</div>
+              <h3>Sözleşme Analizi</h3>
+              <p>Hukuki metin risk tespiti</p>
+              <span class="tool-cost">6 kredi</span>
+              <span class="tool-badge pro">Pro</span>
+            </div>
+          </div>
+
+          <div id="toolModal" class="modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="toolModalTitle">
+            <div class="modal-content tool-modal-content">
+              <div class="modal-header">
+                <h2 id="toolModalTitle"></h2>
+                <button class="modal-close" data-close-modal="toolModal" aria-label="Kapat">&times;</button>
+              </div>
+              <div id="toolFormArea"></div>
+              <div class="tool-actions">
+                <button id="runToolBtn" class="primary-button">Çalıştır</button>
+                <span id="toolCreditCost" class="tool-cost-label"></span>
+              </div>
+              <div id="toolOutput" class="tool-output" style="display:none">
+                <div class="tool-output-header">
+                  <h3>Sonuç</h3>
+                  <button id="copyToolOutput" class="ghost-button small">Kopyala</button>
+                </div>
+                <div id="toolOutputContent"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- MARKETPLACE -->
+        <section id="marketplaceTab" class="tab-panel">
+          <div class="card">
+            <div class="card-header-row">
+              <div>
+                <h2>Prompt Pazaryeri</h2>
+                <p>Topluluk tarafından oluşturulan prompt şablonlarını keşfedin ve paylaşın.</p>
+              </div>
+              <div class="filter-row">
+                <select id="mpCategoryFilter">
+                  <option value="all">Tüm Kategoriler</option>
+                  <option value="marketing">Pazarlama</option>
+                  <option value="hr">İnsan Kaynakları</option>
+                  <option value="finance">Finans</option>
+                  <option value="technical">Teknik</option>
+                  <option value="legal">Hukuk</option>
+                  <option value="general">Genel</option>
+                  <option value="education">Eğitim</option>
+                </select>
+                <select id="mpSortFilter">
+                  <option value="popular">En Popüler</option>
+                  <option value="rating">En Yüksek Puan</option>
+                  <option value="newest">En Yeni</option>
+                </select>
+                <button id="createPromptBtn" class="small-button primary">+ Prompt Oluştur</button>
+              </div>
+            </div>
+            <div id="promptList" class="card-list"></div>
+          </div>
+
+          <div id="promptModal" class="modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="promptModalTitle">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h2 id="promptModalTitle">Yeni Prompt</h2>
+                <button class="modal-close" data-close-modal="promptModal" aria-label="Kapat">&times;</button>
+              </div>
+              <div id="promptModalBody"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- LIBRARY -->
+        <section id="libraryTab" class="tab-panel">
+          <div class="card">
+            <h2>AI Okuryazarlık Kütüphanesi</h2>
+            <p>Kurumunuza uygun derlenmiş Türkçe dokümanlar.</p>
+            <div id="libraryList" class="card-list"></div>
+          </div>
+        </section>
+
+        <!-- EXAM -->
+        <section id="examTab" class="tab-panel">
+          <div class="card">
+            <div class="card-header-row">
+              <div>
+                <h2>AI Okuryazarlık Sınavı ve Sertifika</h2>
+                <p>Üç seviyeli sınav ile yetkinliğinizi belgeleyin.</p>
+              </div>
+              <div class="exam-controls">
+                <select id="examLevelSelect">
+                  <option value="level1">Seviye 1 – Temel</option>
+                  <option value="level2">Seviye 2 – İş / Ofis</option>
+                  <option value="level3">Seviye 3 – Teknik</option>
+                </select>
+                <button id="startExamBtn" class="small-button primary">Sınavı Başlat</button>
+              </div>
+            </div>
+            <div id="examSummary" class="exam-summary">
+              <div><span>En iyi skor:</span> <strong><span id="examBestScore">-</span></strong></div>
+              <div><span>Sertifika:</span> <strong><span id="examCertificateStatus">Henüz alınmadı</span></strong></div>
+            </div>
+            <div id="quizContainer">
+              <p class="exam-hint">Sınavı başlattığınızda sorular görüntülenecek.</p>
+            </div>
+            <div class="exam-actions">
+              <button id="submitExamBtn" class="small-button primary" disabled>Cevapları Gönder</button>
+              <button id="downloadCertBtn" class="small-button" style="display:none">Sertifika İndir</button>
+              <button id="linkedinShareBtn" class="small-button" style="display:none">LinkedIn'de Paylaş</button>
+              <span id="quizResultMessage" class="exam-result-message"></span>
+            </div>
+          </div>
+          <div class="card" id="myCertsCard" style="display:none">
+            <h2>Sertifikalarım</h2>
+            <div id="myCertsList"></div>
+          </div>
+        </section>
+
+        <!-- CHALLENGES -->
+        <section id="challengesTab" class="tab-panel">
+          <div class="card">
+            <h2>Görevler ve Mini Challenge'lar</h2>
+            <p>Gerçek iş akışlarınızda AI kullanmanızı teşvik eden görevler.</p>
+            <div id="challengeList" class="card-list"></div>
+          </div>
+        </section>
+
+        <!-- GOOGLE DATA -->
+        <section id="googledataTab" class="tab-panel">
+          <div class="card" id="googleConnectCard">
+            <div class="card-header-row">
+              <div>
+                <h2>Google Hesap Entegrasyonu</h2>
+                <p id="googleStatusText">Google hesabinizi baglayarak Gmail, Calendar, Drive, Contacts ve Tasks verilerinize erisin.</p>
+              </div>
+              <div id="googleConnectActions">
+                <button id="connectGoogleBtn" class="google-btn">
+                  <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                  Google ile Baglan
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div id="googleDataContent" style="display:none">
+            <div class="google-sub-tabs">
+              <button class="google-sub-tab active" data-gsub="gmail">Gmail</button>
+              <button class="google-sub-tab" data-gsub="calendar">Takvim</button>
+              <button class="google-sub-tab" data-gsub="drive">Drive</button>
+              <button class="google-sub-tab" data-gsub="contacts">Kisiler</button>
+              <button class="google-sub-tab" data-gsub="tasks">Gorevler</button>
+            </div>
+
+            <div id="gsubGmail" class="google-sub-panel active">
+              <div class="card">
+                <div class="card-header-row">
+                  <h2>Gmail</h2>
+                  <div class="filter-row">
+                    <input type="text" id="gmailSearch" placeholder="E-posta ara..." style="background:rgba(15,23,42,0.9);border:1px solid rgba(55,65,81,0.8);border-radius:999px;padding:6px 14px;color:var(--text);font-size:12px;width:200px" />
+                    <button id="gmailSearchBtn" class="small-button primary">Ara</button>
+                    <button id="gmailRefreshBtn" class="ghost-button small">Yenile</button>
+                  </div>
+                </div>
+                <div id="gmailList" class="card-list"></div>
+              </div>
+              <div id="gmailDetail" class="card" style="display:none">
+                <div class="card-header-row">
+                  <h2 id="gmailDetailSubject"></h2>
+                  <div>
+                    <button id="gmailSummarizeBtn" class="small-button primary">AI ile Ozetle</button>
+                    <button id="gmailReplyBtn" class="small-button">Yanit Taslagi Olustur</button>
+                    <button id="gmailCloseBtn" class="ghost-button small">Kapat</button>
+                  </div>
+                </div>
+                <div id="gmailDetailMeta" style="font-size:12px;color:var(--text-muted);margin-bottom:8px"></div>
+                <div id="gmailDetailBody" style="font-size:13px;line-height:1.6;white-space:pre-wrap;max-height:400px;overflow-y:auto"></div>
+                <div id="gmailAiResult" class="tool-output" style="display:none;margin-top:12px">
+                  <div class="tool-output-header"><h3>AI Sonucu</h3></div>
+                  <div id="gmailAiResultContent"></div>
+                </div>
+              </div>
+            </div>
+
+            <div id="gsubCalendar" class="google-sub-panel">
+              <div class="card">
+                <div class="card-header-row">
+                  <h2>Takvim Etkinlikleri</h2>
+                  <button id="calendarRefreshBtn" class="ghost-button small">Yenile</button>
+                </div>
+                <div id="calendarList" class="card-list"></div>
+              </div>
+            </div>
+
+            <div id="gsubDrive" class="google-sub-panel">
+              <div class="card">
+                <div class="card-header-row">
+                  <h2>Google Drive</h2>
+                  <button id="driveRefreshBtn" class="ghost-button small">Yenile</button>
+                </div>
+                <div id="driveList" class="card-list"></div>
+              </div>
+              <div id="driveDetail" class="card" style="display:none">
+                <div class="card-header-row">
+                  <h2 id="driveDetailName"></h2>
+                  <div>
+                    <button id="driveSummarizeBtn" class="small-button primary">AI ile Ozetle</button>
+                    <button id="driveCloseBtn" class="ghost-button small">Kapat</button>
+                  </div>
+                </div>
+                <div id="driveDetailContent" style="font-size:13px;line-height:1.6;white-space:pre-wrap;max-height:400px;overflow-y:auto"></div>
+                <div id="driveAiResult" class="tool-output" style="display:none;margin-top:12px">
+                  <div class="tool-output-header"><h3>AI Sonucu</h3></div>
+                  <div id="driveAiResultContent"></div>
+                </div>
+              </div>
+            </div>
+
+            <div id="gsubContacts" class="google-sub-panel">
+              <div class="card">
+                <div class="card-header-row">
+                  <h2>Kisiler</h2>
+                  <button id="contactsRefreshBtn" class="ghost-button small">Yenile</button>
+                </div>
+                <div id="contactsList" class="card-list"></div>
+              </div>
+            </div>
+
+            <div id="gsubTasks" class="google-sub-panel">
+              <div class="card">
+                <div class="card-header-row">
+                  <h2>Google Tasks</h2>
+                  <button id="tasksRefreshBtn" class="ghost-button small">Yenile</button>
+                </div>
+                <div id="taskLists"></div>
+                <div id="taskItems" class="card-list" style="margin-top:10px"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- LEADERBOARD -->
+        <section id="leaderboardTab" class="tab-panel">
+          <div class="grid two-columns">
+            <div class="card">
+              <div class="card-header-row">
+                <h2>Bireysel Sıralama</h2>
+                <select id="lbPeriod">
+                  <option value="all">Tüm Zamanlar</option>
+                  <option value="month">Bu Ay</option>
+                  <option value="week">Bu Hafta</option>
+                </select>
+              </div>
+              <div id="userLeaderboard" class="leaderboard-list"></div>
+            </div>
+            <div class="card">
+              <h2>Departman Liderlik Tablosu</h2>
+              <p>En çok AI kullanan departman hangisi?</p>
+              <div id="deptLeaderboard" class="leaderboard-list"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- PROFILE -->
+        <section id="profileTab" class="tab-panel">
+          <div class="grid two-columns">
+            <div class="card">
+              <h2>Profil Özeti</h2>
+              <ul class="profile-stats">
+                <li><span>Rol</span><span id="profileRole">-</span></li>
+                <li><span>Plan</span><span id="profilePlan">Ücretsiz</span></li>
+                <li><span>Kredi</span><span id="profileCredits">0</span></li>
+                <li><span>Eğitim</span><span id="profileCompletedCourses">0</span></li>
+                <li><span>Görev</span><span id="profileCompletedChallenges">0</span></li>
+                <li><span>Puan</span><span id="profilePoints">0</span></li>
+              </ul>
+              <div class="profile-actions">
+                <button id="upgradePlanBtn" class="small-button primary">Planı Yükselt</button>
+                <button id="resetProgressBtn" class="ghost-button">İlerlemeyi Sıfırla</button>
+                <button id="logoutBtn" class="ghost-button" style="display:none">Çıkış Yap</button>
+              </div>
+            </div>
+            <div class="card">
+              <h2>Rozetler</h2>
+              <div id="badgeList" class="badge-list"></div>
+            </div>
+          </div>
+          <div class="card" id="pricingCard">
+            <h2>Planlar ve Fiyatlandırma</h2>
+            <div class="pricing-grid">
+              <div class="pricing-item">
+                <h3>Ücretsiz</h3>
+                <div class="pricing-price">0 TL<span>/ay</span></div>
+                <ul>
+                  <li>100 kredi/ay</li>
+                  <li>Günlük 20 mesaj</li>
+                  <li>3 AI Aracı</li>
+                  <li>Tüm eğitimler</li>
+                </ul>
+                <button class="small-button" data-plan="free">Mevcut</button>
+              </div>
+              <div class="pricing-item featured">
+                <h3>Pro</h3>
+                <div class="pricing-price">99 TL<span>/ay</span></div>
+                <ul>
+                  <li>2.000 kredi/ay</li>
+                  <li>Günlük 200 mesaj</li>
+                  <li>Tüm AI araçları</li>
+                  <li>Prompt pazaryeri</li>
+                  <li>Sertifika</li>
+                </ul>
+                <button class="small-button primary" data-plan="pro">Pro'ya Geç</button>
+              </div>
+              <div class="pricing-item">
+                <h3>Kurumsal</h3>
+                <div class="pricing-price">Özel<span> fiyat</span></div>
+                <ul>
+                  <li>Sınırsız kullanım</li>
+                  <li>Admin paneli</li>
+                  <li>API erişimi</li>
+                  <li>Özel branding</li>
+                  <li>Toplu yönetim</li>
+                </ul>
+                <button class="small-button" data-plan="enterprise">İletişime Geç</button>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <h2>Bülten ve Bildirimler</h2>
+            <p>Haftalık AI ipuçları ve kişiselleştirilmiş öneriler alın.</p>
+            <div class="newsletter-row">
+              <button id="newsletterToggle" class="small-button primary">Bültene Abone Ol</button>
+              <span id="newsletterStatus"></span>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="app-footer">
+        <span>AI Academy Platform v2.0</span>
+        <span>
+          <a href="#" id="adminLink" style="display:none">Admin Paneli</a>
+        </span>
+      </footer>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- AUTH MODAL -->
+    <div id="authModal" class="modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+      <div class="modal-content auth-modal">
+        <div class="modal-header">
+          <h2 id="authModalTitle">Giriş Yap</h2>
+          <button class="modal-close" data-close-modal="authModal" aria-label="Kapat">&times;</button>
+        </div>
+        <form id="authForm" novalidate>
+          <div id="authNameField" style="display:none">
+            <label for="authName">İsim</label>
+            <input type="text" id="authName" placeholder="Adınız Soyadınız" autocomplete="name" />
+          </div>
+          <div>
+            <label for="authEmail">E-posta</label>
+            <input type="email" id="authEmail" placeholder="ornek@sirket.com" required autocomplete="email" />
+          </div>
+          <div class="password-field-wrapper">
+            <label for="authPassword">Şifre</label>
+            <div class="password-input-row">
+              <input type="password" id="authPassword" placeholder="En az 6 karakter" required autocomplete="current-password" minlength="6" />
+              <button type="button" id="togglePasswordBtn" class="password-toggle" aria-label="Şifreyi göster" title="Şifreyi göster/gizle">&#128065;</button>
+            </div>
+            <div id="passwordStrength" class="password-strength" style="display:none">
+              <div class="password-strength-bar"><div id="passwordStrengthFill" class="password-strength-fill"></div></div>
+              <span id="passwordStrengthText" class="password-strength-text"></span>
+            </div>
+          </div>
+          <div id="authError" class="auth-error" role="alert"></div>
+          <button type="submit" id="authSubmitBtn" class="primary-button full-width">Giriş Yap</button>
+          <div class="auth-divider"><span>veya</span></div>
+          <button type="button" id="googleLoginBtn" class="google-btn full-width">
+            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+            Google ile Giris Yap
+          </button>
+          <p class="auth-switch">
+            <span id="authSwitchText">Hesabınız yok mu?</span>
+            <a href="#" id="authSwitchLink">Kayıt Ol</a>
+          </p>
+        </form>
+      </div>
+    </div>
+
+    <!-- ADMIN MODAL -->
+    <div id="adminModal" class="modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="adminModalTitle">
+      <div class="modal-content admin-modal">
+        <div class="modal-header">
+          <h2 id="adminModalTitle">Admin Paneli</h2>
+          <button class="modal-close" data-close-modal="adminModal" aria-label="Kapat">&times;</button>
+        </div>
+        <div class="admin-tabs">
+          <button class="admin-tab active" data-admin-tab="overview">Genel Bakış</button>
+          <button class="admin-tab" data-admin-tab="users">Kullanıcılar</button>
+          <button class="admin-tab" data-admin-tab="maturity">AI Olgunluk</button>
+        </div>
+        <div id="adminContent" class="admin-content"></div>
+      </div>
+    </div>
+
+    <!-- PLAN UPGRADE MODAL -->
+    <div id="planModal" class="modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="planModalTitle">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="planModalTitle">Plan Yükseltme</h2>
+          <button class="modal-close" data-close-modal="planModal" aria-label="Kapat">&times;</button>
+        </div>
+        <div id="planModalBody" class="plan-modal-body"></div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
