@@ -82,8 +82,8 @@ function bootstrap(db) {
       name TEXT NOT NULL,
       role TEXT DEFAULT 'general',
       plan TEXT DEFAULT 'free',
-      credits INTEGER DEFAULT 100,
-      monthly_credits INTEGER DEFAULT 100,
+      credits INTEGER DEFAULT 50,
+      monthly_credits INTEGER DEFAULT 50,
       company_id INTEGER,
       is_admin INTEGER DEFAULT 0,
       completed_courses TEXT DEFAULT '[]',
@@ -119,8 +119,30 @@ function bootstrap(db) {
     primary_color TEXT DEFAULT '#4f46e5',
     max_users INTEGER DEFAULT 50,
     plan TEXT DEFAULT 'enterprise',
+    kvkk_mode INTEGER DEFAULT 1,
+    sso_provider TEXT,
+    sso_config TEXT,
+    custom_domain TEXT,
+    billing_email TEXT,
+    contact_person TEXT,
+    contract_start TEXT,
+    contract_end TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   )`);
+
+  const companyMigrations = [
+    'ALTER TABLE companies ADD COLUMN kvkk_mode INTEGER DEFAULT 1',
+    'ALTER TABLE companies ADD COLUMN sso_provider TEXT',
+    'ALTER TABLE companies ADD COLUMN sso_config TEXT',
+    'ALTER TABLE companies ADD COLUMN custom_domain TEXT',
+    'ALTER TABLE companies ADD COLUMN billing_email TEXT',
+    'ALTER TABLE companies ADD COLUMN contact_person TEXT',
+    'ALTER TABLE companies ADD COLUMN contract_start TEXT',
+    'ALTER TABLE companies ADD COLUMN contract_end TEXT',
+  ];
+  for (const m of companyMigrations) {
+    try { db.run(m); } catch { /* column already exists */ }
+  }
 
   db.run(`CREATE TABLE IF NOT EXISTS conversations (
     id TEXT PRIMARY KEY,

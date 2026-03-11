@@ -7,9 +7,9 @@ const router = Router();
 
 function getAuthClient(user) {
   const oauth2 = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/google/callback'
+    (process.env.GOOGLE_CLIENT_ID || '').trim(),
+    (process.env.GOOGLE_CLIENT_SECRET || '').trim(),
+    (process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/google/callback').trim()
   );
   oauth2.setCredentials({
     access_token: user.google_access_token,
@@ -33,6 +33,9 @@ function getAuthClient(user) {
 
 function requireGoogle(req, res, next) {
   authRequired(req, res, () => {
+    if (req.user.plan === 'free') {
+      return res.status(403).json({ error: 'Google entegrasyonu Pro plan gerektirir.', requiresPro: true });
+    }
     if (!req.user.google_id || !req.user.google_access_token) {
       return res.status(403).json({ error: 'Google hesabi baglanmamis. Once Google ile giris yapin.' });
     }

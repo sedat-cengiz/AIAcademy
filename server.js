@@ -45,6 +45,10 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', uptime: Math.floor(process.uptime()), env: isProd ? 'production' : 'development' });
 });
 
+app.get('/api/config/public', (req, res) => {
+  res.json({ gaMeasurementId: process.env.GA_MEASUREMENT_ID || null });
+});
+
 app.use('/api/auth', require('./api/auth'));
 app.use('/api/chat', require('./api/chat'));
 app.use('/api/tools', require('./api/tools'));

@@ -2,6 +2,7 @@ const { Router } = require('express');
 const Anthropic = require('@anthropic-ai/sdk');
 const { get, all, run } = require('../db/init');
 const { authRequired, deductCredits } = require('./middleware');
+const { PLANS, getPlanForUser } = require('./credits');
 const crypto = require('crypto');
 
 const router = Router();
@@ -31,7 +32,7 @@ router.post('/conversations', authRequired, (req, res) => {
 
 router.get('/conversations/:id/messages', authRequired, (req, res) => {
   const conv = get('SELECT * FROM conversations WHERE id = ? AND user_id = ?', [req.params.id, req.user.id]);
-  if (!conv) return res.status(404).json({ error: 'Konusma bulunamadi' });
+  if (!conv) return res.json({ conversation: null, messages: [] });
   const messages = all('SELECT role, content, created_at FROM chat_messages WHERE conversation_id = ? ORDER BY id ASC', [req.params.id]);
   res.json({ conversation: conv, messages });
 });
@@ -46,11 +47,12 @@ router.post('/message', authRequired, async (req, res) => {
   const { conversationId, message, systemPromptKey } = req.body;
   if (!message) return res.status(400).json({ error: 'Mesaj gerekli' });
 
-  const planLimits = { free: 20, pro: 200, enterprise: 99999 };
-  const dailyLimit = planLimits[req.user.plan] || 20;
+  const plan = getPlanForUser(req.user);
+  const dailyLimit = plan.dailyMessages;
   const todayCount = get("SELECT COUNT(*) as cnt FROM chat_messages WHERE user_id = ? AND role = 'user' AND created_at > datetime('now', '-1 day')", [req.user.id]);
   if (todayCount && todayCount.cnt >= dailyLimit) {
-    return res.status(429).json({ error: `Gunluk mesaj limitine ulastiniz (${dailyLimit}).` });
+    const upgradeHint = req.user.plan === 'free' ? ' Pro plana yukseltme yaparak limiti 200 mesaja cikarabilirsiniz.' : '';
+    return res.status(429).json({ error: `Gunluk mesaj limitine ulastiniz (${dailyLimit}).${upgradeHint}`, limit: dailyLimit, used: todayCount.cnt, plan: req.user.plan });
   }
 
   let convId = conversationId;
@@ -62,8 +64,12 @@ router.post('/message', authRequired, async (req, res) => {
       [convId, req.user.id, message.substring(0, 60), sysPrompt]);
   } else {
     const conv = get('SELECT * FROM conversations WHERE id = ? AND user_id = ?', [convId, req.user.id]);
-    if (!conv) return res.status(404).json({ error: 'Konusma bulunamadi' });
-    sysPrompt = conv.system_prompt || sysPrompt;
+    if (!conv) {
+      run('INSERT INTO conversations (id, user_id, title, system_prompt) VALUES (?, ?, ?, ?)',
+        [convId, req.user.id, message.substring(0, 60), sysPrompt]);
+    } else {
+      sysPrompt = conv.system_prompt || sysPrompt;
+    }
   }
 
   run('INSERT INTO chat_messages (conversation_id, user_id, role, content) VALUES (?, ?, ?, ?)',
@@ -71,7 +77,7 @@ router.post('/message', authRequired, async (req, res) => {
 
   const history = all('SELECT role, content FROM chat_messages WHERE conversation_id = ? ORDER BY id ASC', [convId]);
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = (process.env.ANTHROPIC_API_KEY || '').trim();
   if (!apiKey || apiKey.startsWith('sk-ant-your')) {
     const demoReply = generateDemoReply(message);
     run('INSERT INTO chat_messages (conversation_id, user_id, role, content, tokens_used) VALUES (?, ?, ?, ?, ?)',
@@ -83,8 +89,10 @@ router.post('/message', authRequired, async (req, res) => {
 
   try {
     const client = new Anthropic({ apiKey });
+    const modelId = plan.model || 'claude-3-haiku-20240307';
+    const maxTokens = req.user.plan === 'free' ? 1024 : 2048;
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514', max_tokens: 2048, system: sysPrompt,
+      model: modelId, max_tokens: maxTokens, system: sysPrompt,
       messages: history.map(m => ({ role: m.role, content: m.content })),
     });
     const reply = response.content[0].text;
@@ -99,8 +107,8 @@ router.post('/message', authRequired, async (req, res) => {
     run("UPDATE conversations SET updated_at = datetime('now') WHERE id = ?", [convId]);
     res.json({ conversationId: convId, reply, tokensUsed, creditsUsed });
   } catch (err) {
-    console.error('Claude API error:', err.message);
-    res.status(500).json({ error: 'AI yanit uretemedi.' });
+    console.error('Claude API error:', err.message, err.status, err.type);
+    res.status(500).json({ error: 'AI yanit uretemedi: ' + (err.message || 'bilinmeyen hata') });
   }
 });
 

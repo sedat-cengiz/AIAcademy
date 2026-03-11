@@ -6,6 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect rx='20' width='100' height='100' fill='%234f46e5'/><text x='50' y='68' text-anchor='middle' font-size='48' font-weight='700' fill='white'>AI</text></svg>" />
     <link rel="stylesheet" href="styles.css" />
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-6CRRZSC3E7"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-6CRRZSC3E7');
+    </script>
   </head>
   <body>
     <a href="#main-content" class="skip-link">İçeriğe geç</a>
@@ -175,6 +183,13 @@
 
         <!-- AI CHAT -->
         <section id="chatTab" class="tab-panel">
+          <div id="chatUpgradeBanner" class="upgrade-banner" style="display:none">
+            <div class="upgrade-banner-text">
+              <span id="chatLimitText">Ücretsiz planda günde 10 mesaj hakkınız var.</span>
+              <small>Pro'ya geçerek 200 mesaj/gün ve gelişmiş AI modeli (Sonnet) kullanın.</small>
+            </div>
+            <button class="upgrade-banner-btn" onclick="openPlanContactModal('pro')">Bilgi Al</button>
+          </div>
           <div class="chat-layout">
             <button id="mobileChatSidebarToggle" class="mobile-sidebar-toggle" aria-label="Konuşma listesini aç">&#9776; Konuşmalar</button>
             <div class="chat-sidebar" id="chatSidebar">
@@ -210,6 +225,11 @@
                 </div>
               </div>
               <div class="chat-input-area">
+                <div id="chatUsageBar" class="usage-indicator" style="display:none">
+                  <span>Mesaj:</span>
+                  <div class="usage-bar"><div class="usage-bar-fill" id="chatUsageFill"></div></div>
+                  <span id="chatUsageText">0/10</span>
+                </div>
                 <div class="chat-input-row">
                   <button id="voiceBtn" class="icon-button" title="Sesli giriş">&#127908;</button>
                   <textarea id="chatInput" placeholder="Mesajınızı yazın..." rows="1"></textarea>
@@ -217,6 +237,7 @@
                 </div>
                 <div class="chat-input-hint">
                   <span id="chatCreditHint">Her mesaj ~1 kredi harcar</span>
+                  <span id="chatModelHint" style="font-size:10px;color:var(--text-muted)"></span>
                   <span id="voiceStatus" style="display:none">Dinleniyor...</span>
                 </div>
               </div>
@@ -229,6 +250,18 @@
           <div class="card">
             <h2>AI Araç Paketi</h2>
             <p>Hazır AI araçlarıyla anında verimlilik kazanın. Her araç kredi harcar.</p>
+            <div id="toolUsageBar" class="usage-indicator" style="display:none">
+              <span>Günlük kullanım:</span>
+              <div class="usage-bar"><div class="usage-bar-fill" id="toolUsageFill"></div></div>
+              <span id="toolUsageText">0/3</span>
+            </div>
+          </div>
+          <div id="toolUpgradeBanner" class="upgrade-banner" style="display:none">
+            <div class="upgrade-banner-text">
+              Ücretsiz planda 3 araç ve günde 3 kullanım hakkınız var.
+              <small>Pro'ya geçerek tüm 8 araca sınırsız erişin.</small>
+            </div>
+            <button class="upgrade-banner-btn" onclick="openPlanContactModal('pro')">Bilgi Al</button>
           </div>
           <div class="tools-grid" id="toolsGrid">
             <div class="tool-card" data-tool="email-writer">
@@ -406,6 +439,13 @@
 
         <!-- GOOGLE DATA -->
         <section id="googledataTab" class="tab-panel">
+          <div id="googleUpgradeBanner" class="upgrade-banner" style="display:none">
+            <div class="upgrade-banner-text">
+              Google Workspace entegrasyonu Pro plan gerektirir.
+              <small>Gmail, Calendar, Drive, Contacts ve Tasks'a AI destekli erişim için Pro'ya geçin.</small>
+            </div>
+            <button class="upgrade-banner-btn" onclick="openPlanContactModal('pro')">Bilgi Al</button>
+          </div>
           <div class="card" id="googleConnectCard">
             <div class="card-header-row">
               <div>
@@ -565,39 +605,56 @@
           </div>
           <div class="card" id="pricingCard">
             <h2>Planlar ve Fiyatlandırma</h2>
+            <p style="color:var(--text-muted);margin-bottom:16px;font-size:14px">Eğitim içerikleri herkese açık. AI araçları ve asistan kullanımı plana göre değişir.</p>
             <div class="pricing-grid">
               <div class="pricing-item">
+                <div class="pricing-badge free-badge">Herkes İçin</div>
                 <h3>Ücretsiz</h3>
                 <div class="pricing-price">0 TL<span>/ay</span></div>
                 <ul>
-                  <li>100 kredi/ay</li>
-                  <li>Günlük 20 mesaj</li>
-                  <li>3 AI Aracı</li>
-                  <li>Tüm eğitimler</li>
+                  <li class="included">&#10003; Tüm 9 eğitim modülü</li>
+                  <li class="included">&#10003; Kütüphane erişimi</li>
+                  <li class="included">&#10003; Sınav ve sertifika</li>
+                  <li class="included">&#10003; Günlük görevler</li>
+                  <li class="included">&#10003; AI Asistan (10 mesaj/gün)</li>
+                  <li class="included">&#10003; 3 AI Aracı (3 kullanım/gün)</li>
+                  <li class="included">&#10003; Ücretsiz promptlar</li>
+                  <li class="excluded">&#10007; Google entegrasyonu</li>
+                  <li class="excluded">&#10007; Gelişmiş AI modeli</li>
+                  <li class="muted">50 kredi/ay &middot; Haiku modeli</li>
                 </ul>
-                <button class="small-button" data-plan="free">Mevcut</button>
+                <button class="small-button" data-plan="free">Mevcut Plan</button>
               </div>
               <div class="pricing-item featured">
+                <div class="pricing-badge pro-badge">En Popüler</div>
                 <h3>Pro</h3>
                 <div class="pricing-price">99 TL<span>/ay</span></div>
                 <ul>
-                  <li>2.000 kredi/ay</li>
-                  <li>Günlük 200 mesaj</li>
-                  <li>Tüm AI araçları</li>
-                  <li>Prompt pazaryeri</li>
-                  <li>Sertifika</li>
+                  <li class="included">&#10003; Tüm ücretsiz özellikler</li>
+                  <li class="included highlight">&#10003; AI Asistan (200 mesaj/gün)</li>
+                  <li class="included highlight">&#10003; Tüm 8 AI Aracı</li>
+                  <li class="included highlight">&#10003; Gelişmiş AI modeli (Sonnet)</li>
+                  <li class="included">&#10003; Google Workspace entegrasyonu</li>
+                  <li class="included">&#10003; Prompt pazaryeri (alım-satım)</li>
+                  <li class="included">&#10003; Öncelikli destek</li>
+                  <li class="muted">2.000 kredi/ay</li>
                 </ul>
-                <button class="small-button primary" data-plan="pro">Pro'ya Geç</button>
+                <button class="small-button primary" data-plan="pro">Bilgi Al</button>
               </div>
-              <div class="pricing-item">
+              <div class="pricing-item enterprise-item">
+                <div class="pricing-badge enterprise-badge">Şirketler İçin</div>
                 <h3>Kurumsal</h3>
                 <div class="pricing-price">Özel<span> fiyat</span></div>
                 <ul>
-                  <li>Sınırsız kullanım</li>
-                  <li>Admin paneli</li>
-                  <li>API erişimi</li>
-                  <li>Özel branding</li>
-                  <li>Toplu yönetim</li>
+                  <li class="included">&#10003; Tüm Pro özellikleri</li>
+                  <li class="included highlight">&#10003; Sınırsız kullanım</li>
+                  <li class="included highlight">&#10003; Admin paneli</li>
+                  <li class="included highlight">&#10003; AI Olgunluk Skoru</li>
+                  <li class="included">&#10003; Toplu kullanıcı yönetimi</li>
+                  <li class="included">&#10003; KVKK uyumluluk raporu</li>
+                  <li class="included">&#10003; API erişimi</li>
+                  <li class="included">&#10003; Özel branding</li>
+                  <li class="included">&#10003; Dedike destek</li>
                 </ul>
                 <button class="small-button" data-plan="enterprise">İletişime Geç</button>
               </div>
@@ -662,6 +719,47 @@
           <p class="auth-switch">
             <span id="authSwitchText">Hesabınız yok mu?</span>
             <a href="#" id="authSwitchLink">Kayıt Ol</a>
+          </p>
+        </form>
+      </div>
+    </div>
+
+    <!-- PLAN CONTACT MODAL -->
+    <div id="planContactModal" class="modal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="planContactTitle">
+      <div class="modal-content plan-contact-modal">
+        <div class="modal-header">
+          <h2 id="planContactTitle">Plan Hakkında Bilgi Alın</h2>
+          <button class="modal-close" data-close-modal="planContactModal" aria-label="Kapat">&times;</button>
+        </div>
+        <div id="planContactInfo" class="plan-contact-info"></div>
+        <form id="planContactForm" novalidate>
+          <input type="hidden" id="planContactPlan" />
+          <div>
+            <label for="planContactName">Adınız Soyadınız</label>
+            <input type="text" id="planContactName" placeholder="Adınız Soyadınız" required autocomplete="name" />
+          </div>
+          <div>
+            <label for="planContactEmail">E-posta Adresiniz</label>
+            <input type="email" id="planContactEmail" placeholder="ornek@sirket.com" required autocomplete="email" />
+          </div>
+          <div>
+            <label for="planContactCompany">Şirket (isteğe bağlı)</label>
+            <input type="text" id="planContactCompany" placeholder="Şirket adınız" autocomplete="organization" />
+          </div>
+          <div>
+            <label for="planContactPhone">Telefon (isteğe bağlı)</label>
+            <input type="tel" id="planContactPhone" placeholder="05XX XXX XX XX" autocomplete="tel" />
+          </div>
+          <div>
+            <label for="planContactMessage">Mesajınız</label>
+            <textarea id="planContactMessage" rows="3" placeholder="Sorularınız veya notlarınız..."></textarea>
+          </div>
+          <div id="planContactError" class="auth-error" role="alert"></div>
+          <button type="submit" id="planContactSubmitBtn" class="primary-button full-width">
+            <span>&#9993;</span> E-posta Gönder
+          </button>
+          <p class="plan-contact-alt">
+            veya doğrudan yazın: <a href="mailto:info@aiacademy.com.tr" class="plan-contact-email-link">info@aiacademy.com.tr</a>
           </p>
         </form>
       </div>

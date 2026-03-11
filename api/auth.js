@@ -21,9 +21,9 @@ const GOOGLE_SCOPES = [
 
 function getOAuth2Client() {
   return new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/google/callback'
+    (process.env.GOOGLE_CLIENT_ID || '').trim(),
+    (process.env.GOOGLE_CLIENT_SECRET || '').trim(),
+    (process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/auth/google/callback').trim()
   );
 }
 
@@ -40,7 +40,7 @@ router.post('/register', (req, res) => {
     [email.toLowerCase(), hash, name, role || 'general']);
 
   const user = get('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
-  const token = jwt.sign({ userId: user.id }, SECRET(), { expiresIn: '30d' });
+  const token = jwt.sign({ userId: user.id, email: user.email, name: user.name, role: user.role || 'general' }, SECRET(), { expiresIn: '30d' });
   res.json({ token, user: sanitizeUser(user) });
 });
 
@@ -53,7 +53,7 @@ router.post('/login', (req, res) => {
     return res.status(401).json({ error: 'Gecersiz e-posta veya sifre' });
   }
   run("UPDATE users SET last_login = datetime('now') WHERE id = ?", [user.id]);
-  const token = jwt.sign({ userId: user.id }, SECRET(), { expiresIn: '30d' });
+  const token = jwt.sign({ userId: user.id, email: user.email, name: user.name, role: user.role || 'general' }, SECRET(), { expiresIn: '30d' });
   res.json({ token, user: sanitizeUser(user) });
 });
 
@@ -136,7 +136,10 @@ router.get('/google/callback', async (req, res) => {
     user = get('SELECT * FROM users WHERE google_id = ?', [googleId])
         || get('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
 
-    const jwtToken = jwt.sign({ userId: user.id }, SECRET(), { expiresIn: '30d' });
+    const jwtToken = jwt.sign({
+      userId: user.id, email: user.email, name: user.name,
+      role: user.role || 'general', googleId: googleId, avatarUrl: avatar,
+    }, SECRET(), { expiresIn: '30d' });
     res.redirect(`/?token=${jwtToken}`);
   } catch (err) {
     console.error('Google OAuth callback error:', err.message);

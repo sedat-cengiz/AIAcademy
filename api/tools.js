@@ -2,6 +2,7 @@ const { Router } = require('express');
 const Anthropic = require('@anthropic-ai/sdk');
 const { run } = require('../db/init');
 const { authRequired, deductCredits } = require('./middleware');
+const { PLANS, getPlanForUser, getDailyToolUsage } = require('./credits');
 
 const router = Router();
 
@@ -25,22 +26,33 @@ const TOOL_DEFS = {
 };
 
 router.get('/list', authRequired, (req, res) => {
+  const plan = getPlanForUser(req.user);
+  const dailyUsed = getDailyToolUsage(req.user.id);
   const tools = Object.entries(TOOL_DEFS).map(([id, t]) => ({
     id, name: t.name, creditCost: t.creditCost,
-    available: req.user.plan !== 'free' || ['email-writer', 'summarizer', 'translator'].includes(id),
+    available: plan.allowedTools === 'all' || plan.allowedTools.includes(id),
+    requiresPro: plan.allowedTools !== 'all' && !plan.allowedTools.includes(id),
   }));
-  res.json({ tools });
+  res.json({ tools, dailyUsed, dailyLimit: plan.dailyToolUses, plan: req.user.plan });
 });
 
 router.post('/run/:toolId', authRequired, async (req, res) => {
   const { toolId } = req.params;
   const tool = TOOL_DEFS[toolId];
   if (!tool) return res.status(404).json({ error: 'Arac bulunamadi' });
-  if (req.user.plan === 'free' && !['email-writer', 'summarizer', 'translator'].includes(toolId))
-    return res.status(403).json({ error: 'Bu arac Pro plan gerektirir.' });
+
+  const plan = getPlanForUser(req.user);
+  if (plan.allowedTools !== 'all' && !plan.allowedTools.includes(toolId))
+    return res.status(403).json({ error: 'Bu arac Pro plan gerektirir. Pro plana yukseltme yaparak tum araclara erisebilirsiniz.', requiresPro: true });
+
+  const dailyUsed = getDailyToolUsage(req.user.id);
+  if (dailyUsed >= plan.dailyToolUses) {
+    const upgradeHint = req.user.plan === 'free' ? ' Pro plana yukseltme yaparak sinirsiz kullanim elde edebilirsiniz.' : '';
+    return res.status(429).json({ error: `Gunluk arac kullanim limitine ulastiniz (${plan.dailyToolUses}).${upgradeHint}`, dailyUsed, dailyLimit: plan.dailyToolUses });
+  }
 
   const prompt = tool.buildPrompt(req.body);
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = (process.env.ANTHROPIC_API_KEY || '').trim();
 
   if (!apiKey || apiKey.startsWith('sk-ant-your')) {
     run('INSERT INTO tool_usage (user_id, tool_name, tokens_used, credits_used) VALUES (?, ?, ?, ?)',
@@ -53,7 +65,9 @@ router.post('/run/:toolId', authRequired, async (req, res) => {
 
   try {
     const client = new Anthropic({ apiKey });
-    const response = await client.messages.create({ model: 'claude-sonnet-4-20250514', max_tokens: 4096, messages: [{ role: 'user', content: prompt }] });
+    const modelId = plan.model || 'claude-3-haiku-20240307';
+    const maxTokens = req.user.plan === 'free' ? 2048 : 4096;
+    const response = await client.messages.create({ model: modelId, max_tokens: maxTokens, messages: [{ role: 'user', content: prompt }] });
     const output = response.content[0].text;
     const tokensUsed = (response.usage?.input_tokens || 0) + (response.usage?.output_tokens || 0);
     run('INSERT INTO tool_usage (user_id, tool_name, tokens_used, credits_used) VALUES (?, ?, ?, ?)',

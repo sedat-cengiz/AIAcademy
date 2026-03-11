@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Anthropic = require('@anthropic-ai/sdk');
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const anthropic = new Anthropic({ apiKey: (process.env.ANTHROPIC_API_KEY || '').trim() });
 
 // ─── IN-MEMORY CACHE ────────────────────────────────────────
 // Server-side cache: translated once, served to ALL users from memory.
@@ -162,7 +162,7 @@ async function translateToTurkish(items) {
 
   if (enItems.length === 0) return processedTr;
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = (process.env.ANTHROPIC_API_KEY || '').trim();
   if (!apiKey || apiKey.includes('your-key') || apiKey.includes('placeholder')) {
     const processedEn = enItems.map(fallbackItem);
     return mergeAndSort([...processedTr, ...processedEn]);

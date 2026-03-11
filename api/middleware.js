@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { get, run } = require('../db/init');
 
-const SECRET = () => process.env.JWT_SECRET || 'dev-secret-change-me';
+const SECRET = () => (process.env.JWT_SECRET || 'dev-secret-change-me').trim();
 
 function authRequired(req, res, next) {
   const header = req.headers.authorization;
@@ -10,7 +10,17 @@ function authRequired(req, res, next) {
   }
   try {
     const payload = jwt.verify(header.slice(7), SECRET());
-    const user = get('SELECT * FROM users WHERE id = ?', [payload.userId]);
+    let user = get('SELECT * FROM users WHERE id = ?', [payload.userId]);
+    if (!user && payload.email) {
+      user = get('SELECT * FROM users WHERE email = ?', [payload.email]);
+    }
+    if (!user && payload.email) {
+      run(`INSERT INTO users (email, password_hash, name, role, google_id, avatar_url, credits, monthly_credits)
+        VALUES (?, '', ?, ?, ?, ?, 100, 100)`,
+        [payload.email, payload.name || payload.email.split('@')[0],
+         payload.role || 'general', payload.googleId || null, payload.avatarUrl || null]);
+      user = get('SELECT * FROM users WHERE email = ?', [payload.email]);
+    }
     if (!user) return res.status(401).json({ error: 'Kullanici bulunamadi' });
     req.user = user;
     next();

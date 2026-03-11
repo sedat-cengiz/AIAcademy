@@ -5,6 +5,20 @@
 const API = '';
 const STORAGE_KEY = 'aiAcademyPortalState_v3';
 
+// ─── ANALYTICS ──────────────────────────────────────────────
+function trackEvent(eventName, params = {}) {
+  if (typeof gtag === 'undefined') return;
+  gtag('event', eventName, params);
+}
+
+function trackPageView(tabName) {
+  if (typeof gtag === 'undefined') return;
+  gtag('event', 'page_view', {
+    page_title: tabName,
+    page_location: window.location.origin + '/#' + tabName,
+  });
+}
+
 // ─── TOAST NOTIFICATION SYSTEM ──────────────────────────────
 function showToast(message, type = 'info', duration = 4000) {
   const container = document.getElementById('toastContainer');
@@ -206,6 +220,95 @@ function hideAuthModal() {
   if (strengthEl) strengthEl.style.display = 'none';
 }
 
+const PLAN_DISPLAY = {
+  pro: { name: 'Pro', price: '99 TL/ay', desc: 'Gelişmiş AI modeli, 200 mesaj/gün, tüm araçlar ve Google entegrasyonu.' },
+  enterprise: { name: 'Kurumsal', price: 'Özel fiyat', desc: 'Sınırsız kullanım, admin paneli, API erişimi ve dedike destek.' },
+};
+
+function openPlanContactModal(plan) {
+  const info = PLAN_DISPLAY[plan];
+  if (!info) return;
+  const modal = document.getElementById('planContactModal');
+  const infoBox = document.getElementById('planContactInfo');
+  infoBox.innerHTML = `<p class="plan-contact-plan-name">${info.name} Planı</p><p class="plan-contact-plan-price">${info.price} &mdash; ${info.desc}</p>`;
+  document.getElementById('planContactPlan').value = plan;
+  document.getElementById('planContactTitle').textContent = `${info.name} Planı Hakkında Bilgi Alın`;
+
+  const form = document.getElementById('planContactForm');
+  form.style.display = '';
+  const successEl = modal.querySelector('.plan-contact-success');
+  if (successEl) successEl.remove();
+
+  if (currentUser) {
+    document.getElementById('planContactName').value = currentUser.name || '';
+    document.getElementById('planContactEmail').value = currentUser.email || '';
+  } else {
+    document.getElementById('planContactName').value = '';
+    document.getElementById('planContactEmail').value = '';
+  }
+  document.getElementById('planContactCompany').value = '';
+  document.getElementById('planContactPhone').value = '';
+  document.getElementById('planContactMessage').value = '';
+  document.getElementById('planContactError').textContent = '';
+
+  modal.style.display = 'flex';
+  setTimeout(() => document.getElementById('planContactName').focus(), 100);
+}
+
+function hidePlanContactModal() {
+  document.getElementById('planContactModal').style.display = 'none';
+}
+
+function handlePlanContactSubmit(e) {
+  e.preventDefault();
+  const errEl = document.getElementById('planContactError');
+  errEl.textContent = '';
+
+  const name = document.getElementById('planContactName').value.trim();
+  const email = document.getElementById('planContactEmail').value.trim();
+  const company = document.getElementById('planContactCompany').value.trim();
+  const phone = document.getElementById('planContactPhone').value.trim();
+  const message = document.getElementById('planContactMessage').value.trim();
+  const plan = document.getElementById('planContactPlan').value;
+  const planInfo = PLAN_DISPLAY[plan];
+
+  if (!name) { errEl.textContent = 'Lütfen adınızı girin.'; return; }
+  if (!email || !email.includes('@')) { errEl.textContent = 'Lütfen geçerli bir e-posta adresi girin.'; return; }
+
+  const subject = encodeURIComponent(`${planInfo.name} Planı Başvurusu - ${name}`);
+  const bodyParts = [
+    `Merhaba,`,
+    ``,
+    `${planInfo.name} planı hakkında bilgi almak istiyorum.`,
+    ``,
+    `Ad Soyad: ${name}`,
+    `E-posta: ${email}`,
+    company ? `Şirket: ${company}` : '',
+    phone ? `Telefon: ${phone}` : '',
+    `Seçilen Plan: ${planInfo.name} (${planInfo.price})`,
+    message ? `\nMesaj:\n${message}` : '',
+    ``,
+    `Teşekkürler.`,
+  ].filter(Boolean).join('\n');
+
+  const mailtoLink = `mailto:info@aiacademy.com.tr?subject=${subject}&body=${encodeURIComponent(bodyParts)}`;
+  window.open(mailtoLink, '_blank');
+
+  const form = document.getElementById('planContactForm');
+  form.style.display = 'none';
+  const modal = document.getElementById('planContactModal');
+  const successDiv = document.createElement('div');
+  successDiv.className = 'plan-contact-success';
+  successDiv.innerHTML = `
+    <div class="success-icon">&#9993;</div>
+    <h3>E-posta uygulamanız açılıyor!</h3>
+    <p>E-posta istemciniz açılmazsa doğrudan <strong>info@aiacademy.com.tr</strong> adresine yazabilirsiniz.</p>
+    <p style="margin-top:12px;font-size:12px;color:var(--text-muted)">Bu pencereyi kapatabilirsiniz.</p>
+  `;
+  modal.querySelector('.plan-contact-modal').appendChild(successDiv);
+  showToast('E-posta istemciniz açılıyor...', 'success');
+}
+
 function setAuthMode(mode) {
   authMode = mode;
   document.getElementById('authModalTitle').textContent = mode === 'login' ? 'Giris Yap' : 'Kayit Ol';
@@ -252,6 +355,7 @@ async function handleAuth(e) {
     hideAuthModal();
     updateAuthUI();
     refreshUI();
+    trackEvent(authMode === 'login' ? 'login' : 'sign_up', { method: 'email', user_plan: currentUser.plan, user_role: currentUser.role });
     showToast(`Hoş geldiniz, ${currentUser.name}!`, 'success');
   } catch (err) {
     errEl.textContent = err.message;
@@ -300,11 +404,13 @@ function updateAuthUI() {
     if (dropdownInfo) {
       dropdownInfo.innerHTML = `<div class="dropdown-name">${currentUser.name}</div><div class="dropdown-email">${currentUser.email}</div><span class="dropdown-plan-badge">${planLabel} Plan</span>`;
     }
+    updatePlanUI();
   } else {
     authArea.style.display = 'block';
     userArea.style.display = 'none';
     creditPill.style.display = 'none';
     adminLink.style.display = 'none';
+    hidePlanUI();
     logoutBtn.style.display = 'none';
   }
 }
@@ -317,6 +423,112 @@ function logout() {
   updateAuthUI();
   refreshUI();
   showToast('Başarıyla çıkış yaptınız.', 'success');
+}
+
+// ─── PLAN UI & UPGRADE BANNERS ──────────────────────────────
+let _planLimits = null;
+
+async function fetchPlanLimits() {
+  if (!token) return null;
+  try {
+    _planLimits = await apiFetch('/api/credits/limits');
+    return _planLimits;
+  } catch { return null; }
+}
+
+function updatePlanUI() {
+  if (!currentUser) return;
+  const isFree = currentUser.plan === 'free';
+
+  const chatBanner = document.getElementById('chatUpgradeBanner');
+  if (chatBanner) chatBanner.style.display = isFree ? 'flex' : 'none';
+
+  const toolBanner = document.getElementById('toolUpgradeBanner');
+  if (toolBanner) toolBanner.style.display = isFree ? 'flex' : 'none';
+
+  const googleBanner = document.getElementById('googleUpgradeBanner');
+  if (googleBanner) googleBanner.style.display = isFree ? 'flex' : 'none';
+
+  const modelHint = document.getElementById('chatModelHint');
+  if (modelHint) {
+    modelHint.textContent = isFree ? 'Haiku modeli' : (currentUser.plan === 'pro' ? 'Sonnet modeli' : '');
+  }
+
+  updateToolCardStates();
+
+  if (token) fetchPlanLimits().then(updateUsageIndicators);
+
+  const planBtns = document.querySelectorAll('[data-plan]');
+  planBtns.forEach(btn => {
+    const p = btn.dataset.plan;
+    if (p === currentUser.plan) {
+      btn.textContent = 'Mevcut Plan';
+      btn.disabled = true;
+      btn.classList.remove('primary');
+    } else if (p === 'free') {
+      btn.textContent = 'Ücretsiz Plan';
+      btn.disabled = true;
+    } else if (p === 'enterprise') {
+      btn.textContent = 'İletişime Geç';
+      btn.disabled = false;
+    } else {
+      btn.textContent = 'Bilgi Al';
+      btn.disabled = false;
+      if (p === 'pro') btn.classList.add('primary');
+    }
+  });
+}
+
+function hidePlanUI() {
+  ['chatUpgradeBanner', 'toolUpgradeBanner', 'googleUpgradeBanner', 'chatUsageBar', 'toolUsageBar'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
+function updateUsageIndicators(limits) {
+  if (!limits) return;
+
+  const chatUsageBar = document.getElementById('chatUsageBar');
+  const chatUsageFill = document.getElementById('chatUsageFill');
+  const chatUsageText = document.getElementById('chatUsageText');
+  if (chatUsageBar && limits.dailyMessages) {
+    chatUsageBar.style.display = 'flex';
+    const pct = Math.min(100, (limits.dailyMessages.used / limits.dailyMessages.limit) * 100);
+    chatUsageFill.style.width = pct + '%';
+    chatUsageFill.className = 'usage-bar-fill' + (pct >= 90 ? ' danger' : pct >= 70 ? ' warning' : '');
+    chatUsageText.textContent = `${limits.dailyMessages.used}/${limits.dailyMessages.limit}`;
+  }
+
+  const toolUsageBar = document.getElementById('toolUsageBar');
+  const toolUsageFill = document.getElementById('toolUsageFill');
+  const toolUsageText = document.getElementById('toolUsageText');
+  if (toolUsageBar && limits.dailyToolUses) {
+    toolUsageBar.style.display = limits.plan === 'free' ? 'flex' : 'none';
+    const pct = Math.min(100, (limits.dailyToolUses.used / limits.dailyToolUses.limit) * 100);
+    toolUsageFill.style.width = pct + '%';
+    toolUsageFill.className = 'usage-bar-fill' + (pct >= 90 ? ' danger' : pct >= 70 ? ' warning' : '');
+    toolUsageText.textContent = `${limits.dailyToolUses.used}/${limits.dailyToolUses.limit}`;
+  }
+
+  const chatLimitText = document.getElementById('chatLimitText');
+  if (chatLimitText && limits.dailyMessages) {
+    const remaining = Math.max(0, limits.dailyMessages.limit - limits.dailyMessages.used);
+    chatLimitText.textContent = `Ücretsiz planda günde ${limits.dailyMessages.limit} mesaj hakkınız var. (Kalan: ${remaining})`;
+  }
+}
+
+function updateToolCardStates() {
+  if (!currentUser) return;
+  const isFree = currentUser.plan === 'free';
+  const freeTools = ['email-writer', 'summarizer', 'translator'];
+  document.querySelectorAll('.tool-card').forEach(card => {
+    const toolId = card.dataset.tool;
+    const isLocked = isFree && !freeTools.includes(toolId);
+    card.classList.toggle('tool-locked', isLocked);
+    const badge = card.querySelector('.tool-badge');
+    if (badge) badge.style.display = isLocked ? 'inline' : 'none';
+  });
 }
 
 // ─── USER DROPDOWN ──────────────────────────────────────────
@@ -532,9 +744,11 @@ function evaluateQuiz() {
   msg.textContent = passed ? `Tebrikler! Skor: ${score}/100. Sertifika kazandınız!` : `Skor: ${score}/100. En az ${quiz.passScore} gerekli.`;
   msg.className = `exam-result-message ${passed ? 'exam-result-pass' : 'exam-result-fail'}`;
   showToast(passed ? `Tebrikler! ${quiz.name} sınavını ${score} puanla geçtiniz!` : `Sınav puanı: ${score}/100. Geçme notu: ${quiz.passScore}`, passed ? 'success' : 'warning');
+  trackEvent('exam_submit', { exam_level: lid, exam_name: quiz.name, score, passed, attempts: s.quizResults[lid].attempts });
   document.getElementById('submitExamBtn').disabled = true;
 
   if (passed && token) {
+    trackEvent('certificate_earned', { level: lid, score });
     generateCertificate(lid, score);
     apiFetch('/api/credits/earn', { method: 'POST', body: { reason: `Sinav gecme: ${quiz.name}`, amount: 10 } }).catch(() => {});
   }
@@ -646,13 +860,19 @@ async function sendChatMessage() {
     appendChatBubble('assistant', data.reply);
     container.scrollTop = container.scrollHeight;
     loadConversations();
+    trackEvent('chat_message', { persona, credits_used: data.creditsUsed || 0, is_demo: !!data.demo });
     if (currentUser) {
       currentUser.credits -= (data.creditsUsed || 0);
       updateAuthUI();
     }
   } catch (err) {
     typing.remove();
-    appendChatBubble('assistant', `Hata: ${err.message}`);
+    if (err.message && err.message.includes('limitine')) {
+      trackEvent('chat_limit_hit', { plan: currentUser?.plan });
+      appendChatBubble('assistant', `${err.message}\n\nPro plana yükseltme yapmak için **Profil** sekmesini ziyaret edin.`);
+    } else {
+      appendChatBubble('assistant', `Hata: ${err.message}`);
+    }
   }
 }
 
@@ -701,6 +921,11 @@ function startVoice() {
 // ─── TOOLS ──────────────────────────────────────────────────
 function openToolModal(toolId) {
   if (!token) { showAuthModal(); return; }
+  const freeTools = ['email-writer', 'summarizer', 'translator'];
+  if (currentUser?.plan === 'free' && !freeTools.includes(toolId)) {
+    showToast('Bu araç Pro plan gerektirir. Profil sayfasından planınızı yükseltebilirsiniz.', 'warning', 5000);
+    return;
+  }
   const names = {
     'email-writer': 'E-posta Yazici', 'summarizer': 'Dokuman Ozetleyici', 'meeting-notes': 'Toplanti Notu',
     'report-generator': 'Rapor Olusturucu', 'code-reviewer': 'Kod Inceleyici', 'translator': 'Ceviri Motoru',
@@ -739,17 +964,24 @@ async function runTool(toolId) {
     const data = await apiFetch(`/api/tools/run/${toolId}`, { method: 'POST', body });
     document.getElementById('toolOutput').style.display = 'block';
     document.getElementById('toolOutputContent').innerHTML = formatMarkdown(data.output);
+    trackEvent('tool_use', { tool_id: toolId, credits_used: data.creditsUsed || 0, is_demo: !!data.demo });
     if (currentUser) {
       currentUser.credits -= (data.creditsUsed || 0);
       updateAuthUI();
     }
   } catch (err) {
     document.getElementById('toolOutput').style.display = 'block';
-    document.getElementById('toolOutputContent').textContent = `Hata: ${err.message}`;
+    const msg = err.message || 'Bilinmeyen hata';
+    if (msg.includes('Pro plan') || msg.includes('limitine')) {
+      document.getElementById('toolOutputContent').innerHTML = `<div class="upgrade-banner" style="margin:0"><div class="upgrade-banner-text">${msg}</div><button class="upgrade-banner-btn" onclick="document.querySelector('.tab-button[data-tab=&quot;profile&quot;]').click();setTimeout(()=>document.getElementById('pricingCard').scrollIntoView({behavior:'smooth'}),100);document.getElementById('toolModal').style.display='none'">Pro'ya Geç</button></div>`;
+    } else {
+      document.getElementById('toolOutputContent').textContent = `Hata: ${msg}`;
+    }
   } finally {
     runBtn.disabled = false;
     runBtn.classList.remove('btn-loading');
     runBtn.textContent = 'Çalıştır';
+    fetchPlanLimits().then(updateUsageIndicators);
   }
 }
 
@@ -804,6 +1036,7 @@ async function viewPrompt(id) {
 async function buyPrompt(id) {
   try {
     await apiFetch(`/api/marketplace/prompts/${id}/buy`, { method: 'POST' });
+    trackEvent('prompt_purchase', { prompt_id: id });
     viewPrompt(id);
     if (currentUser) { currentUser.credits -= 0; checkAuth(); }
   } catch (err) { showToast(err.message, 'error'); }
@@ -836,6 +1069,7 @@ async function submitNewPrompt() {
     }});
     document.getElementById('promptModal').style.display = 'none';
     loadMarketplace();
+    trackEvent('prompt_publish', { category: document.getElementById('newPromptCat').value, price: parseInt(document.getElementById('newPromptPrice').value) || 0 });
     showToast('Prompt başarıyla yayınlandı!', 'success');
   } catch (err) { showToast(err.message, 'error'); }
 }
@@ -1029,6 +1263,7 @@ function updateGoogleUI() {
 }
 
 function loginWithGoogle() {
+  trackEvent('google_connect_click');
   window.location.href = '/api/auth/google';
 }
 
@@ -1047,6 +1282,7 @@ function handleGoogleTokenFromURL() {
     token = urlToken;
     localStorage.setItem('aiacademy_token', token);
     window.history.replaceState({}, '', '/');
+    trackEvent('login', { method: 'google' });
   }
 }
 
@@ -1363,6 +1599,7 @@ function handleCourseToggle(id) {
     appState.points = s.points + course.points;
     appState.recentCompletions = [{ type: 'course', id, title: course.title, points: course.points, at: Date.now() }, ...s.recentCompletions];
     showToast(`"${course.title}" tamamlandı! +${course.points} puan`, 'success');
+    trackEvent('course_complete', { course_id: id, course_title: course.title, points: course.points, total_completed: appState.completedCourses.length });
     if (token) {
       apiFetch('/api/credits/earn', { method: 'POST', body: { reason: `Kurs tamamlama: ${course.title}`, amount: 5 } }).then(() => checkAuth()).catch(() => {});
     }
@@ -1389,6 +1626,7 @@ function handleChallengeToggle(id) {
     appState.points = s.points + ch.points;
     appState.recentCompletions = [{ type: 'challenge', id, title: ch.title, points: ch.points, at: Date.now() }, ...s.recentCompletions];
     showToast(`"${ch.title}" görevi tamamlandı! +${ch.points} puan`, 'success');
+    trackEvent('challenge_complete', { challenge_id: id, challenge_title: ch.title, points: ch.points });
     if (token) {
       apiFetch('/api/credits/earn', { method: 'POST', body: { reason: `Gorev tamamlama: ${ch.title}`, amount: 3 } }).then(() => checkAuth()).catch(() => {});
     }
@@ -1433,6 +1671,7 @@ function setupEventHandlers() {
       btn.setAttribute('aria-selected', 'true');
       document.getElementById(`${target}Tab`).classList.add('active');
       document.title = `${tabLabels[target] || target} – AI Academy`;
+      trackPageView(target);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       if (target === 'chat') loadConversations();
       if (target === 'marketplace') loadMarketplace();
@@ -1490,6 +1729,7 @@ function setupEventHandlers() {
     if (certs.certificates.length > 0) window.open(`/api/certificates/pdf/${certs.certificates[0].certificate_code}`, '_blank');
   });
   document.getElementById('linkedinShareBtn').addEventListener('click', () => {
+    trackEvent('certificate_share_linkedin');
     window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(window.location.origin), '_blank');
   });
 
@@ -1498,6 +1738,7 @@ function setupEventHandlers() {
   document.getElementById('authForm').addEventListener('submit', handleAuth);
   document.getElementById('authSwitchLink').addEventListener('click', (e) => { e.preventDefault(); setAuthMode(authMode === 'login' ? 'register' : 'login'); });
   document.getElementById('logoutBtn').addEventListener('click', logout);
+  document.getElementById('planContactForm').addEventListener('submit', handlePlanContactSubmit);
 
   // User dropdown menu
   document.getElementById('userMenuBtn').addEventListener('click', (e) => {
@@ -1603,21 +1844,15 @@ function setupEventHandlers() {
 
   // Plan upgrade
   document.getElementById('upgradePlanBtn').addEventListener('click', () => {
-    document.querySelector('.tab-button[data-tab="profile"]').click();
-    document.getElementById('pricingCard').scrollIntoView({ behavior: 'smooth' });
+    openPlanContactModal('pro');
   });
   document.querySelectorAll('[data-plan]').forEach(btn => {
-    btn.addEventListener('click', async () => {
+    btn.addEventListener('click', () => {
       const plan = btn.dataset.plan;
-      if (plan === 'enterprise') { showToast('Kurumsal plan için satış ekibimizle iletişime geçin.', 'info'); return; }
-      if (!token) { showAuthModal(); return; }
+      if (plan === 'free') return;
       if (plan === currentUser?.plan) return;
-      try {
-        await apiFetch('/api/credits/upgrade', { method: 'POST', body: { plan } });
-        await checkAuth();
-        refreshUI();
-        showToast('Plan başarıyla güncellendi!', 'success');
-      } catch (err) { showToast(err.message, 'error'); }
+      trackEvent('plan_upgrade_click', { target_plan: plan, current_plan: currentUser?.plan || 'free' });
+      openPlanContactModal(plan);
     });
   });
 
