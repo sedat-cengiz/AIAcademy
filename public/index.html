@@ -104,6 +104,36 @@
 
         <!-- DASHBOARD -->
         <section id="dashboardTab" class="tab-panel active">
+          <div class="card onboarding-card" id="onboardingCard">
+            <div class="onboarding-title-row">
+              <div>
+                <h2>AI Academy'ye Hoş Geldiniz</h2>
+                <p>İlk 5 dakikada aşağıdaki adımları tamamlayarak platforma alışın.</p>
+              </div>
+              <div class="onboarding-progress" id="onboardingProgress"></div>
+            </div>
+            <ul class="onboarding-steps">
+              <li class="onboarding-step" data-step="chat">
+                <label>
+                  <input type="checkbox" id="obStepChat">
+                  <span>İlk AI sohbetinizi yapın (AI Asistan sekmesinde bir mesaj gönderin).</span>
+                </label>
+              </li>
+              <li class="onboarding-step" data-step="tool">
+                <label>
+                  <input type="checkbox" id="obStepTool">
+                  <span>Bir AI aracını çalıştırın (örneğin E-posta Yazıcı veya Doküman Özetleyici).</span>
+                </label>
+              </li>
+              <li class="onboarding-step" data-step="course">
+                <label>
+                  <input type="checkbox" id="obStepCourse">
+                  <span>Bir eğitim içeriğini açın (Eğitim Kataloğu sekmesinden).</span>
+                </label>
+              </li>
+            </ul>
+            <button type="button" class="onboarding-dismiss" id="onboardingDismissBtn">Bu kartı gizle</button>
+          </div>
           <div class="grid two-columns">
             <div class="card">
               <h2>Önerilen İlk Adımlar</h2>
@@ -639,7 +669,8 @@
                   <li class="included">&#10003; Öncelikli destek</li>
                   <li class="muted">2.000 kredi/ay</li>
                 </ul>
-                <button class="small-button primary" data-plan="pro">Bilgi Al</button>
+            <button class="small-button primary" id="proSubscribeBtn">Hemen Abone Ol</button>
+            <button class="small-button" data-plan="pro">Bilgi Al</button>
               </div>
               <div class="pricing-item enterprise-item">
                 <div class="pricing-badge enterprise-badge">Şirketler İçin</div>
@@ -775,6 +806,7 @@
         <div class="admin-tabs">
           <button class="admin-tab active" data-admin-tab="overview">Genel Bakış</button>
           <button class="admin-tab" data-admin-tab="users">Kullanıcılar</button>
+          <button class="admin-tab" data-admin-tab="leads">Leadler</button>
           <button class="admin-tab" data-admin-tab="maturity">AI Olgunluk</button>
         </div>
         <div id="adminContent" class="admin-content"></div>

@@ -223,6 +223,20 @@ function bootstrap(db) {
     created_at TEXT DEFAULT (datetime('now'))
   )`);
 
+  db.run(`CREATE TABLE IF NOT EXISTS leads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    plan TEXT NOT NULL,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    company TEXT,
+    phone TEXT,
+    message TEXT,
+    source TEXT,
+    status TEXT DEFAULT 'new',
+    user_id INTEGER,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`);
+
   const admin = get("SELECT id FROM users WHERE email = ?", ['admin@aiacademy.local']);
   if (!admin) {
     const hash = bcrypt.hashSync('admin123', 10);

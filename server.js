@@ -40,6 +40,21 @@ app.use(async (req, res, next) => {
   }
 });
 
+// Basic request logging for observability
+app.use((req, res, next) => {
+  const start = Date.now();
+  const requestId = Math.random().toString(36).slice(2, 10);
+  res.setHeader('X-Request-Id', requestId);
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const userId = req.user?.id || '-';
+    console.log(
+      `[${new Date().toISOString()}] id=${requestId} method=${req.method} path=${req.originalUrl} status=${res.statusCode} duration_ms=${duration} user_id=${userId}`
+    );
+  });
+  next();
+});
+
 // ─── ROUTES ─────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', uptime: Math.floor(process.uptime()), env: isProd ? 'production' : 'development' });
@@ -56,6 +71,8 @@ app.use('/api/credits', require('./api/credits'));
 app.use('/api/marketplace', require('./api/marketplace'));
 app.use('/api/certificates', require('./api/certificates'));
 app.use('/api/admin', require('./api/admin'));
+app.use('/api/leads', require('./api/leads'));
+app.use('/api/billing', require('./api/billing'));
 app.use('/api/google', require('./api/google'));
 app.use('/api/news', require('./api/news'));
 

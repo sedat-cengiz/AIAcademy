@@ -160,9 +160,39 @@ function loadLocalState() {
 function saveLocalState(s) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
 
 let appState = loadLocalState() || {
-  role: 'general', completedCourses: [], completedChallenges: [],
-  recentCompletions: [], points: 0, quizResults: {},
+  role: 'general',
+  completedCourses: [],
+  completedChallenges: [],
+  recentCompletions: [],
+  points: 0,
+  quizResults: {},
+  onboarding: { chat: false, tool: false, course: false },
+  onboardingDismissed: false,
 };
+
+function ensureOnboardingState() {
+  if (!appState.onboarding) {
+    appState.onboarding = { chat: false, tool: false, course: false };
+  }
+}
+
+function getOnboardingState() {
+  ensureOnboardingState();
+  return appState.onboarding;
+}
+
+function isOnboardingComplete() {
+  const o = getOnboardingState();
+  return !!(o.chat && o.tool && o.course);
+}
+
+function completeOnboardingStep(step) {
+  ensureOnboardingState();
+  if (appState.onboarding[step]) return;
+  appState.onboarding[step] = true;
+  saveLocalState(appState);
+  renderOnboardingCard();
+}
 
 function getState() {
   if (currentUser) {
@@ -228,6 +258,11 @@ const PLAN_DISPLAY = {
 function openPlanContactModal(plan) {
   const info = PLAN_DISPLAY[plan];
   if (!info) return;
+  trackEvent('plan_contact_opened', {
+    plan,
+    plan_name: info.name,
+    current_plan: currentUser?.plan || 'anonymous',
+  });
   const modal = document.getElementById('planContactModal');
   const infoBox = document.getElementById('planContactInfo');
   infoBox.innerHTML = `<p class="plan-contact-plan-name">${info.name} Planı</p><p class="plan-contact-plan-price">${info.price} &mdash; ${info.desc}</p>`;
@@ -275,38 +310,48 @@ function handlePlanContactSubmit(e) {
   if (!name) { errEl.textContent = 'Lütfen adınızı girin.'; return; }
   if (!email || !email.includes('@')) { errEl.textContent = 'Lütfen geçerli bir e-posta adresi girin.'; return; }
 
-  const subject = encodeURIComponent(`${planInfo.name} Planı Başvurusu - ${name}`);
-  const bodyParts = [
-    `Merhaba,`,
-    ``,
-    `${planInfo.name} planı hakkında bilgi almak istiyorum.`,
-    ``,
-    `Ad Soyad: ${name}`,
-    `E-posta: ${email}`,
-    company ? `Şirket: ${company}` : '',
-    phone ? `Telefon: ${phone}` : '',
-    `Seçilen Plan: ${planInfo.name} (${planInfo.price})`,
-    message ? `\nMesaj:\n${message}` : '',
-    ``,
-    `Teşekkürler.`,
-  ].filter(Boolean).join('\n');
+  trackEvent('plan_contact_submitted', {
+    plan,
+    plan_name: planInfo?.name || plan,
+    has_token: !!token,
+  });
+  const submitBtn = document.getElementById('planContactSubmitBtn');
+  submitBtn.disabled = true;
+  submitBtn.classList.add('btn-loading');
 
-  const mailtoLink = `mailto:info@aiacademy.com.tr?subject=${subject}&body=${encodeURIComponent(bodyParts)}`;
-  window.open(mailtoLink, '_blank');
-
-  const form = document.getElementById('planContactForm');
-  form.style.display = 'none';
-  const modal = document.getElementById('planContactModal');
-  const successDiv = document.createElement('div');
-  successDiv.className = 'plan-contact-success';
-  successDiv.innerHTML = `
+  apiFetch('/api/leads', {
+    method: 'POST',
+    body: {
+      plan,
+      name,
+      email,
+      company,
+      phone,
+      message,
+      source: 'pricing_modal',
+    },
+  }).then(() => {
+    const form = document.getElementById('planContactForm');
+    form.style.display = 'none';
+    const modal = document.getElementById('planContactModal');
+    const successDiv = document.createElement('div');
+    successDiv.className = 'plan-contact-success';
+    successDiv.innerHTML = `
     <div class="success-icon">&#9993;</div>
-    <h3>E-posta uygulamanız açılıyor!</h3>
-    <p>E-posta istemciniz açılmazsa doğrudan <strong>info@aiacademy.com.tr</strong> adresine yazabilirsiniz.</p>
-    <p style="margin-top:12px;font-size:12px;color:var(--text-muted)">Bu pencereyi kapatabilirsiniz.</p>
-  `;
-  modal.querySelector('.plan-contact-modal').appendChild(successDiv);
-  showToast('E-posta istemciniz açılıyor...', 'success');
+    <h3>Talebiniz alındı!</h3>
+    <p>Satış ekibimiz en kısa sürede sizinle iletişime geçecek.</p>
+    <p style="margin-top:8px;font-size:13px;color:var(--text-muted)">Acil durumlar için doğrudan <strong>info@aiacademy.com.tr</strong> adresine de yazabilirsiniz.</p>
+    `;
+    modal.querySelector('.plan-contact-modal').appendChild(successDiv);
+    showToast('Talebiniz alındı. En kısa sürede sizinle iletişime geçeceğiz.', 'success');
+  }).catch((err) => {
+    errEl.textContent = err.message || 'Talep kaydedilirken hata oluştu.';
+    showToast(err.message || 'Talep kaydedilirken hata oluştu.', 'error');
+  }).finally(() => {
+    submitBtn.disabled = false;
+    submitBtn.classList.remove('btn-loading');
+  });
+
 }
 
 function setAuthMode(mode) {
@@ -316,6 +361,9 @@ function setAuthMode(mode) {
   document.getElementById('authSubmitBtn').textContent = mode === 'login' ? 'Giris Yap' : 'Kayit Ol';
   document.getElementById('authSwitchText').textContent = mode === 'login' ? 'Hesabiniz yok mu?' : 'Zaten hesabiniz var mi?';
   document.getElementById('authSwitchLink').textContent = mode === 'login' ? 'Kayit Ol' : 'Giris Yap';
+  if (mode === 'register') {
+    trackEvent('signup_started', { method: 'email' });
+  }
 }
 
 async function handleAuth(e) {
@@ -355,7 +403,12 @@ async function handleAuth(e) {
     hideAuthModal();
     updateAuthUI();
     refreshUI();
-    trackEvent(authMode === 'login' ? 'login' : 'sign_up', { method: 'email', user_plan: currentUser.plan, user_role: currentUser.role });
+    if (authMode === 'login') {
+      trackEvent('login', { method: 'email', user_plan: currentUser.plan, user_role: currentUser.role });
+    } else {
+      trackEvent('sign_up', { method: 'email', user_plan: currentUser.plan, user_role: currentUser.role });
+      trackEvent('signup_completed', { method: 'email', user_plan: currentUser.plan, user_role: currentUser.role });
+    }
     showToast(`Hoş geldiniz, ${currentUser.name}!`, 'success');
   } catch (err) {
     errEl.textContent = err.message;
@@ -423,6 +476,25 @@ function logout() {
   updateAuthUI();
   refreshUI();
   showToast('Başarıyla çıkış yaptınız.', 'success');
+}
+
+async function startProCheckout() {
+  if (!token) {
+    showAuthModal();
+    showToast('Önce hesap oluşturup giriş yapın, ardından tekrar deneyin.', 'info');
+    return;
+  }
+  try {
+    trackEvent('plan_checkout_started', { target_plan: 'pro', current_plan: currentUser?.plan || 'free' });
+    const data = await apiFetch('/api/billing/create-checkout-session', { method: 'POST' });
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      showToast('Ödeme oturumu oluşturulamadı.', 'error');
+    }
+  } catch (err) {
+    showToast(err.message || 'Ödeme başlatılırken hata oluştu.', 'error');
+  }
 }
 
 // ─── PLAN UI & UPGRADE BANNERS ──────────────────────────────
@@ -607,6 +679,40 @@ function renderDashboardLists() {
     <li><span>1 gorev</span><span class="${cc ? 'status-ok' : 'status-pending'}">${cc ? 'Tamam' : 'Bekleniyor'}</span></li>`;
 }
 
+function renderOnboardingCard() {
+  const card = document.getElementById('onboardingCard');
+  if (!card) return;
+  const state = getOnboardingState();
+  const dismissed = appState.onboardingDismissed;
+  const completed = isOnboardingComplete();
+
+  if (dismissed || completed) {
+    card.style.display = 'none';
+    return;
+  }
+
+  card.style.display = 'block';
+  const steps = ['chat', 'tool', 'course'];
+  const completedCount = steps.filter(k => state[k]).length;
+  const progressEl = document.getElementById('onboardingProgress');
+  if (progressEl) progressEl.textContent = `${completedCount}/3 adım tamamlandı`;
+
+  const stepMap = {
+    chat: document.getElementById('obStepChat'),
+    tool: document.getElementById('obStepTool'),
+    course: document.getElementById('obStepCourse'),
+  };
+  steps.forEach(key => {
+    const cb = stepMap[key];
+    if (!cb) return;
+    cb.checked = !!state[key];
+    const li = cb.closest('.onboarding-step');
+    if (li) {
+      li.classList.toggle('completed', !!state[key]);
+    }
+  });
+}
+
 function renderCourses() {
   const s = getState();
   const container = document.getElementById('courseList');
@@ -625,7 +731,7 @@ function renderCourses() {
     card.innerHTML = `<div class="course-main"><div class="course-title-row"><h3>${course.title}</h3><span class="course-chip">${rl}</span></div>
       <div class="course-meta"><span>${course.level}</span><span>${course.duration}</span><span class="points-pill">${course.points} puan</span>
       <span class="${course.mandatory ? 'mandatory-tag' : 'optional-tag'}">${course.mandatory ? 'Zorunlu' : 'Istege bagli'}</span></div></div>
-      <div class="course-actions"><a href="${course.link}" target="_blank" class="small-link">Icerigi ac</a>
+      <div class="course-actions"><a href="${course.link}" target="_blank" class="small-link" data-course-open-id="${course.id}">Icerigi ac</a>
       <button class="small-button ${done ? 'completed' : 'primary'}" data-course-id="${course.id}">${done ? 'Tamamlandi' : 'Tamamladim'}</button></div>`;
     container.appendChild(card);
   });
@@ -706,9 +812,15 @@ function renderExamSummary() {
 
 function renderQuiz(levelId) {
   const quiz = QUIZZES[levelId];
+  if (!quiz) return;
   const container = document.getElementById('quizContainer');
   const submitBtn = document.getElementById('submitExamBtn');
   document.getElementById('quizResultMessage').textContent = '';
+  trackEvent('exam_started', {
+    exam_level: levelId,
+    exam_name: quiz.name,
+    question_count: quiz.questions.length,
+  });
   container.innerHTML = quiz.questions.map((q, qi) =>
     `<div class="quiz-question"><div class="quiz-question-title">Soru ${qi+1}: ${q.text}</div>
     <ul class="quiz-options">${q.options.map((o, oi) => `<li><label><input type="radio" name="quiz-q-${qi}" value="${oi}"><span>${o}</span></label></li>`).join('')}</ul></div>`
@@ -745,6 +857,7 @@ function evaluateQuiz() {
   msg.className = `exam-result-message ${passed ? 'exam-result-pass' : 'exam-result-fail'}`;
   showToast(passed ? `Tebrikler! ${quiz.name} sınavını ${score} puanla geçtiniz!` : `Sınav puanı: ${score}/100. Geçme notu: ${quiz.passScore}`, passed ? 'success' : 'warning');
   trackEvent('exam_submit', { exam_level: lid, exam_name: quiz.name, score, passed, attempts: s.quizResults[lid].attempts });
+  trackEvent('exam_completed', { exam_level: lid, exam_name: quiz.name, score, passed, attempts: s.quizResults[lid].attempts });
   document.getElementById('submitExamBtn').disabled = true;
 
   if (passed && token) {
@@ -781,6 +894,7 @@ async function renderMyCerts() {
 }
 
 // ─── CHAT ────────────────────────────────────────────────────
+let hasTrackedChatStart = false;
 async function loadConversations() {
   if (!token) return;
   try {
@@ -861,6 +975,13 @@ async function sendChatMessage() {
     container.scrollTop = container.scrollHeight;
     loadConversations();
     trackEvent('chat_message', { persona, credits_used: data.creditsUsed || 0, is_demo: !!data.demo });
+    trackEvent('chat_message_sent', {
+      persona,
+      credits_used: data.creditsUsed || 0,
+      has_token: !!token,
+      plan: currentUser?.plan || 'anonymous',
+    });
+    completeOnboardingStep('chat');
     if (currentUser) {
       currentUser.credits -= (data.creditsUsed || 0);
       updateAuthUI();
@@ -933,6 +1054,12 @@ function openToolModal(toolId) {
   };
   const costs = { 'email-writer':3,'summarizer':3,'meeting-notes':4,'report-generator':5,'code-reviewer':4,'translator':3,'presentation':5,'contract-analyzer':6 };
 
+  trackEvent('tool_opened', {
+    tool_id: toolId,
+    plan: currentUser?.plan || 'anonymous',
+    is_free_tool: freeTools.includes(toolId),
+  });
+
   document.getElementById('toolModalTitle').textContent = names[toolId] || toolId;
   document.getElementById('toolCreditCost').textContent = `${costs[toolId] || 0} kredi harcanacak`;
   document.getElementById('toolOutput').style.display = 'none';
@@ -965,6 +1092,13 @@ async function runTool(toolId) {
     document.getElementById('toolOutput').style.display = 'block';
     document.getElementById('toolOutputContent').innerHTML = formatMarkdown(data.output);
     trackEvent('tool_use', { tool_id: toolId, credits_used: data.creditsUsed || 0, is_demo: !!data.demo });
+    trackEvent('tool_run', {
+      tool_id: toolId,
+      credits_used: data.creditsUsed || 0,
+      is_demo: !!data.demo,
+      plan: currentUser?.plan || 'anonymous',
+    });
+    completeOnboardingStep('tool');
     if (currentUser) {
       currentUser.credits -= (data.creditsUsed || 0);
       updateAuthUI();
@@ -1212,6 +1346,24 @@ async function loadAdminTab(tab) {
       content.innerHTML = `<table class="admin-user-table"><tr><th>Ad</th><th>E-posta</th><th>Rol</th><th>Plan</th><th>Puan</th><th>Kurs</th></tr>
       ${d.users.map(u => `<tr><td>${u.name}</td><td>${u.email}</td><td>${u.role}</td><td>${u.plan}</td><td>${u.points}</td><td>${u.courseCount}</td></tr>`).join('')}</table>`;
     } catch { content.innerHTML = '<p>Yukleme hatasi.</p>'; }
+  } else if (tab === 'leads') {
+    try {
+      const d = await apiFetch('/api/leads');
+      if (!d.leads.length) {
+        content.innerHTML = '<p>Henüz lead bulunmuyor.</p>';
+        return;
+      }
+      content.innerHTML = `<table class="admin-user-table"><tr><th>Tarih</th><th>Plan</th><th>Ad</th><th>E-posta</th><th>Şirket</th><th>Telefon</th><th>Kaynak</th></tr>
+      ${d.leads.map(l => `<tr>
+        <td>${new Date(l.created_at).toLocaleString('tr-TR')}</td>
+        <td>${l.plan}</td>
+        <td>${l.name}</td>
+        <td>${l.email}</td>
+        <td>${l.company || ''}</td>
+        <td>${l.phone || ''}</td>
+        <td>${l.source || ''}</td>
+      </tr>`).join('')}</table>`;
+    } catch { content.innerHTML = '<p>Leadler yüklenirken hata oluştu.</p>'; }
   } else if (tab === 'maturity') {
     try {
       const d = await apiFetch('/api/admin/ai-maturity');
@@ -1283,6 +1435,38 @@ function handleGoogleTokenFromURL() {
     localStorage.setItem('aiacademy_token', token);
     window.history.replaceState({}, '', '/');
     trackEvent('login', { method: 'google' });
+  }
+}
+
+async function handleBillingFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const success = params.get('billing_success');
+  const cancel = params.get('billing_cancel');
+  const sessionId = params.get('session_id');
+
+  if (!success && !cancel) return;
+
+  // Temiz URL
+  window.history.replaceState({}, '', '/');
+
+  if (cancel) {
+    showToast('Ödeme işlemi iptal edildi.', 'info');
+    return;
+  }
+
+  if (success && sessionId) {
+    try {
+      const data = await apiFetch('/api/billing/confirm', {
+        method: 'POST',
+        body: { sessionId },
+      });
+      trackEvent('plan_checkout_confirmed', { target_plan: 'pro' });
+      await checkAuth();
+      refreshUI();
+      showToast('Ödemeniz başarıyla alındı. Pro planınız aktifleştirildi.', 'success');
+    } catch (err) {
+      showToast(err.message || 'Ödeme doğrulanırken hata oluştu.', 'error');
+    }
   }
 }
 
@@ -1600,6 +1784,13 @@ function handleCourseToggle(id) {
     appState.recentCompletions = [{ type: 'course', id, title: course.title, points: course.points, at: Date.now() }, ...s.recentCompletions];
     showToast(`"${course.title}" tamamlandı! +${course.points} puan`, 'success');
     trackEvent('course_complete', { course_id: id, course_title: course.title, points: course.points, total_completed: appState.completedCourses.length });
+    trackEvent('lesson_completed', {
+      course_id: id,
+      course_title: course.title,
+      points: course.points,
+      mandatory: !!course.mandatory,
+      role: course.role,
+    });
     if (token) {
       apiFetch('/api/credits/earn', { method: 'POST', body: { reason: `Kurs tamamlama: ${course.title}`, amount: 5 } }).then(() => checkAuth()).catch(() => {});
     }
@@ -1673,7 +1864,13 @@ function setupEventHandlers() {
       document.title = `${tabLabels[target] || target} – AI Academy`;
       trackPageView(target);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      if (target === 'chat') loadConversations();
+      if (target === 'chat') {
+        loadConversations();
+        if (!hasTrackedChatStart) {
+          hasTrackedChatStart = true;
+          trackEvent('chat_started', { source: 'tab_click' });
+        }
+      }
       if (target === 'marketplace') loadMarketplace();
       if (target === 'leaderboard') loadLeaderboard();
       if (target === 'googledata') { checkGoogleStatus(); }
@@ -1739,6 +1936,30 @@ function setupEventHandlers() {
   document.getElementById('authSwitchLink').addEventListener('click', (e) => { e.preventDefault(); setAuthMode(authMode === 'login' ? 'register' : 'login'); });
   document.getElementById('logoutBtn').addEventListener('click', logout);
   document.getElementById('planContactForm').addEventListener('submit', handlePlanContactSubmit);
+  document.getElementById('proSubscribeBtn')?.addEventListener('click', startProCheckout);
+  document.getElementById('onboardingDismissBtn')?.addEventListener('click', () => {
+    appState.onboardingDismissed = true;
+    saveLocalState(appState);
+    const card = document.getElementById('onboardingCard');
+    if (card) card.style.display = 'none';
+  });
+  const onboardingCheckboxes = [
+    { id: 'obStepChat', key: 'chat' },
+    { id: 'obStepTool', key: 'tool' },
+    { id: 'obStepCourse', key: 'course' },
+  ];
+  onboardingCheckboxes.forEach(({ id, key }) => {
+    const cb = document.getElementById(id);
+    if (!cb) return;
+    cb.addEventListener('change', (e) => {
+      // Kullanıcının manuel olarak uncheck yapmasını engelle
+      if (!e.target.checked) {
+        e.target.checked = !!getOnboardingState()[key];
+        return;
+      }
+      completeOnboardingStep(key);
+    });
+  });
 
   // User dropdown menu
   document.getElementById('userMenuBtn').addEventListener('click', (e) => {
@@ -1952,11 +2173,26 @@ function attachDynamicHandlers() {
   document.querySelectorAll('[data-challenge-id]').forEach(btn => {
     btn.onclick = () => handleChallengeToggle(btn.getAttribute('data-challenge-id'));
   });
+   document.querySelectorAll('[data-course-open-id]').forEach(link => {
+    link.addEventListener('click', () => {
+      const id = link.getAttribute('data-course-open-id');
+      const course = COURSES.find(c => c.id === id);
+      if (!course) return;
+      trackEvent('lesson_started', {
+        course_id: id,
+        course_title: course.title,
+        mandatory: !!course.mandatory,
+        role: course.role,
+      });
+      completeOnboardingStep('course');
+    });
+  });
 }
 
 function refreshUI() {
   renderRoleSelector();
   renderOverallStats();
+  renderOnboardingCard();
   renderDashboardLists();
   renderCourses();
   renderChallenges();
@@ -1973,6 +2209,7 @@ async function init() {
   handleGoogleTokenFromURL();
   setupEventHandlers();
   await checkAuth();
+  await handleBillingFromURL();
   refreshUI();
   initVoice();
   if (token) checkGoogleStatus();

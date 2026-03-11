@@ -7,6 +7,23 @@ const { authRequired, SECRET } = require('./middleware');
 
 const router = Router();
 
+// Basit bellek içi rate-limit (login/register brute force koruması)
+const loginWindowMs = 5 * 60 * 1000;
+const loginMaxAttempts = 20;
+const loginAttempts = {};
+
+function checkLoginRateLimit(ip) {
+  const now = Date.now();
+  const entry = loginAttempts[ip] || { count: 0, first: now };
+  if (now - entry.first > loginWindowMs) {
+    entry.count = 0;
+    entry.first = now;
+  }
+  entry.count += 1;
+  loginAttempts[ip] = entry;
+  return entry.count <= loginMaxAttempts;
+}
+
 const GOOGLE_SCOPES = [
   'openid',
   'profile',
@@ -47,6 +64,11 @@ router.post('/register', (req, res) => {
 router.post('/login', (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'E-posta ve sifre gerekli' });
+
+  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.ip || 'unknown';
+  if (!checkLoginRateLimit(ip)) {
+    return res.status(429).json({ error: 'Çok fazla giriş denemesi. Lütfen birkaç dakika sonra tekrar deneyin.' });
+  }
 
   const user = get('SELECT * FROM users WHERE email = ?', [email.toLowerCase()]);
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
